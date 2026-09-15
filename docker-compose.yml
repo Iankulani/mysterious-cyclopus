@@ -1,0 +1,221 @@
+# ============================================================
+# 🐙 MYSTERIOUS CYCLOPUS - Docker Compose Stack
+# ============================================================
+# Includes:
+#   • cyclopus       - main application
+#   • cyclopus-web   - web dashboard (optional separate service)
+#   • redis          - cache / event bus
+#   • postgres       - optional external DB (SQLite is default)
+#   • alpine-tools   - sidecar container with network tools
+# ============================================================
+
+version: "3.9"
+
+networks:
+  cyclopus-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  cyclopus-data:
+  cyclopus-reports:
+  redis-data:
+  pg-data:
+
+services:
+
+  # ----------------------------------------------------------
+  # 🐙 Main Cyclopus service
+  # ----------------------------------------------------------
+  cyclopus:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: mysterious-cyclopus:1.0.0
+    container_name: cyclopus-core
+    hostname: cyclopus-core
+    restart: unless-stopped
+    networks:
+      - cyclopus-net
+    ports:
+      - "5000:5000"     # Web dashboard
+      - "8080:8080"     # Phishing server
+      - "4444:4444"     # Agent C2 listener
+    volumes:
+      - cyclopus-data:/opt/cyclopus/.mysterious_cyclopus
+      - cyclopus-reports:/opt/cyclopus/cyclopus_reports
+      - ./config.json:/opt/cyclopus/.mysterious_cyclopus/config.json:ro
+    environment:
+      - TZ=UTC
+      - CYCLOPUS_LOG_LEVEL=INFO
+      - CYCLOPUS_WEB_PORT=5000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=cyclopus
+      - POSTGRES_USER=cyclopus
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-cyclopus_secret}
+    depends_on:
+      redis:
+        condition: service_healthy
+    cap_add:
+      - NET_ADMIN       # Required for ARP spoofing / packet crafting
+      - NET_RAW         # Required for scapy raw sockets
+      - SYS_PTRACE
+    sysctls:
+      - net.ipv4.ip_forward=1
+    security_opt:
+      - no-new-privileges:false
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import requests,sys; sys.exit(0 if requests.get('http://127.0.0.1:5000/api/stats',timeout=5).status_code==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    stdin_open: true
+    tty: true
+
+  # ----------------------------------------------------------
+  # 🌐 Web dashboard (optional dedicated service)
+  # ----------------------------------------------------------
+  cyclopus-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: mysterious-cyclopus:1.0.0
+    container_name: cyclopus-web
+    hostname: cyclopus-web
+    restart: unless-stopped
+    networks:
+      - cyclopus-net
+    ports:
+      - "5001:5000"
+    volumes:
+      - cyclopus-data:/opt/cyclopus/.mysterious_cyclopus
+      - cyclopus-reports:/opt/cyclopus/cyclopus_reports
+    environment:
+      - CYCLOPUS_WEB_ONLY=true
+      - CYCLOPUS_WEB_PORT=5000
+    command: ["python", "-c", "print('Web dashboard container placeholder')"]
+    profiles:
+      - web        # start with: docker compose --profile web up
+
+  # ----------------------------------------------------------
+  # 🔴 Redis (cache / event bus)
+  # ----------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: cyclopus-redis
+    hostname: redis
+    restart: unless-stopped
+    networks:
+      - cyclopus-net
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-cyclopus_redis}
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-cyclopus_redis}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # ----------------------------------------------------------
+  # 🐘 PostgreSQL (optional — SQLite is default)
+  # ----------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: cyclopus-postgres
+    hostname: postgres
+    restart: unless-stopped
+    networks:
+      - cyclopus-net
+    environment:
+      POSTGRES_DB: cyclopus
+      POSTGRES_USER: cyclopus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cyclopus_secret}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyclopus -d cyclopus"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    profiles:
+      - db         # start with: docker compose --profile db up
+
+  # ----------------------------------------------------------
+  # 🧰 Alpine tools sidecar (network utilities for testing)
+  # ----------------------------------------------------------
+  alpine-tools:
+    image: alpine:3.19
+    container_name: cyclopus-alpine-tools
+    hostname: alpine-tools
+    restart: unless-stopped
+    networks:
+      - cyclopus-net
+    command: >
+      sh -c "
+        apk add --no-cache
+          nmap curl wget bind-tools traceroute netcat-openbsd
+          openssh-client tcpdump iputils busybox-extras bash;
+        echo '🐧 Alpine tools container ready.';
+        tail -f /dev/null
+      "
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    profiles:
+      - tools      # start with: docker compose --profile tools up
+
+  # ----------------------------------------------------------
+  # 🐳 Docker-in-Docker for docker_scan commands (optional)
+  # ----------------------------------------------------------
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.2
+    container_name: cyclopus-docker-proxy
+    hostname: docker-proxy
+    restart: unless-stopped
+    networks:
+      - cyclopus-net
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      INFO: 1
+      POST: 0
+      EXEC: 0
+      VOLUMES: 1
+      NETWORKS: 0
+      AUTH: 0
+      SECRETS: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "2375:2375"
+    profiles:
+      - docker     # start with: docker compose --profile docker up

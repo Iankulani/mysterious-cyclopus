@@ -1,0 +1,95 @@
+# ============================================================
+# 🐙 MYSTERIOUS CYCLOPUS v1.0.0 - Python Requirements
+# ============================================================
+# Core runtime
+python-dotenv>=1.0.0
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# Networking & HTTP
+requests>=2.31.0
+urllib3>=2.0.0
+certifi>=2023.7.22
+
+# System monitoring
+psutil>=5.9.0
+
+# Terminal colors
+colorama>=0.4.6
+
+# ============================================================
+# Security & Cryptography
+# ============================================================
+cryptography>=41.0.0
+paramiko>=3.3.0
+scapy>=2.5.0
+dnspython>=2.4.0
+python-whois>=0.8.0
+
+# ============================================================
+# Web Framework & Dashboard
+# ============================================================
+flask>=3.0.0
+flask-socketio>=5.3.0
+flask-cors>=4.0.0
+python-socketio>=5.9.0
+eventlet>=0.33.3
+gevent>=23.9.1
+
+# ============================================================
+# Platform Bots
+# ============================================================
+discord.py>=2.3.0
+telethon>=1.31.0
+slack-sdk>=3.23.0
+slackclient>=2.9.4
+selenium>=4.15.0
+webdriver-manager>=4.0.1
+pywhatkit>=5.4
+
+# Google APIs
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0
+google-api-python-client>=2.100.0
+
+# ============================================================
+# Keylogger & Input Capture
+# ============================================================
+pynput>=1.7.6
+pyperclip>=1.8.2
+pyautogui>=0.9.54
+pygetwindow>=0.0.9
+
+# ============================================================
+# Data Processing & Visualization
+# ============================================================
+numpy>=1.26.0
+matplotlib>=3.8.0
+seaborn>=0.13.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+pandas>=2.1.0
+
+# ============================================================
+# Report Generation
+# ============================================================
+reportlab>=4.0.0
+Pillow>=10.0.0
+qrcode>=7.4.2
+pyshorteners>=1.0.1
+
+# ============================================================
+# Database & Storage
+# ============================================================
+sqlalchemy>=2.0.0
+
+# ============================================================
+# Utilities
+# ============================================================
+tabulate>=0.9.0
+tqdm>=4.66.0
+python-dateutil>=2.8.2
+pytz>=2023.3
+validators>=0.22.0
+netaddr>=0.9.0
+mac-vendor-lookup>=0.1.12

