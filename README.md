@@ -1,5 +1,6 @@
 # mysterious-cyclopus
 
+<div align="center">
 <img width="374" height="374" alt="mysterious" src="https://github.com/user-attachments/assets/a5e19a1c-00d7-47cd-8396-646c8be5f962" />
 
 [![GitHub stars](https://img.shields.io/github/stars/Iankulani/mysterious-cyclopus?style=for-the-badge&logo=github)](https://github.com/Iankulani/mysterious-cyclopus/stargazers)
@@ -10,6 +11,9 @@
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/Iankulani/mysterious-cyclopus)
 [![Python](https://img.shields.io/badge/python-3.x-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+
+
+</div>
 
 Mysterious cyclopus
 
