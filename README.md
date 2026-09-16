@@ -28,8 +28,6 @@ The framework also includes advanced features such as encrypted command channels
 Mysterious Cyclopus, developed by Accurate Cyber Defense, is intended strictly for authorized security testing, cyber range exercises, and educational environments. Its design philosophy balances offensive realism with defensive insight — helping organizations uncover weaknesses, sharpen incident response, and build resilience before real adversaries strike.
 
 
-
-
 # How to clone the repo
 ```bash
 git clone https://github.com/Iankulani/mysterious-cyclopus.git
@@ -43,6 +41,7 @@ python mysterious_cyclopus.py
 
 # Documentation
 ```bash
+https://iankulani.github.io/Mysterious-cylopus-Doc/
 ```
 
 # References
