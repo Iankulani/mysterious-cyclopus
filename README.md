@@ -47,6 +47,6 @@ python mysterious_cyclopus.py
 ```bash
 ```
 
-
 # Star History
-```bash
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Iankulani/mysterious-cyclopus&type=Date)](https://star-history.com/#Iankulani/mysterious-cyclopus&Date)
