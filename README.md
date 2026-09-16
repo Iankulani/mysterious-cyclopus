@@ -40,9 +40,8 @@ python mysterious_cyclopus.py
 ```
 
 # Documentation
-```bash
-https://iankulani.github.io/Mysterious-cylopus-Doc/
-```
+
+[![Documentation](https://img.shields.io/badge/📖-Documentation-0066ff?style=for-the-badge&logo=readthedocs)](https://iankulani.github.io/Mysterious-cylopus-Doc/)
 
 # References
 ```bash
