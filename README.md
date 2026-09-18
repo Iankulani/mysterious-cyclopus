@@ -12,7 +12,6 @@
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows%20%7C%20macOS-blue?style=for-the-badge&logo=linux&logoColor=white)](https://github.com/Iankulani/mysterious-cyclopus)
 [![Python](https://img.shields.io/badge/python-3.x-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 
-
 </div>
 
 Mysterious Cyclopus is an advanced, multi-platform cybersecurity command-and-control (C2) framework engineered by Accurate Cyber Defense for controlled penetration testing, red team operations, and large-scale cyber defense drills. Designed with stealth, modularity, and operational flexibility at its core, Cyclopus empowers security professionals to simulate realistic adversarial activity while maintaining full oversight of every action executed within the environment.
